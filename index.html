@@ -376,6 +376,15 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
 .sala-canc-orig{font-size:10px;color:#9ab0c8;text-decoration:line-through;margin-top:3px;}
 .sala-canc-meta{font-family:var(--mono);font-size:8px;color:#9ab0c8;margin-top:4px;}
 .sala-hdr-btns{display:flex;gap:4px;align-items:center;flex-shrink:0;}
+.sala-parcial{display:flex;align-items:flex-start;gap:6px;margin:6px -10px -8px;padding:6px 10px;background:#fff7e6;border-top:1px solid #f0d49a;}
+.sala-parcial-txt{flex:1;min-width:0;font-size:9.5px;line-height:1.35;color:#7a4800;}
+.sala-parcial-txt b{font-family:var(--mono);font-size:8.5px;letter-spacing:.4px;}
+.sala-parcial .sala-ibtn{width:24px;height:22px;flex-shrink:0;}
+.sala-parcial .sala-ibtn svg{width:11px;height:11px;}
+.sc-alcance{display:flex;gap:6px;flex-wrap:wrap;}
+.sc-alcance label{flex:1 1 140px;display:flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid #c8d4e0;border-radius:4px;font-size:11px;color:#0d1f35;cursor:pointer;background:#fff;text-transform:none;letter-spacing:0;font-family:inherit;}
+.sc-alcance label:has(input:checked){border-color:#8b1a1a;background:#fbeaea;}
+.sc-alcance small{display:block;font-family:var(--mono);font-size:8.5px;color:#8aa8c0;}
 /* ── Tarjetas de sala v2.22.0: proporciones uniformes ── */
 #salas-grid.salas-grid{grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px;}
 #salas-grid .sala-card{display:flex;flex-direction:column;background:#fff;border-radius:6px;}
@@ -1148,7 +1157,7 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
             <div class="field" style="margin:0;"><label>Salas qx</label>
               <select id="cfg-salas" onchange="buildSalasUI()" style="width:70px;"><option value="5">5</option><option value="6" selected>6</option></select></div>
             <div class="field" style="margin:0;"><label>Consultorios</label>
-              <select id="cfg-cons" onchange="buildSalasUI()" style="width:70px;"><option value="0">0</option><option value="1">1</option><option value="2" selected>2</option></select></div>
+              <select id="cfg-cons" onchange="buildSalasUI()" style="width:70px;"><option value="0">0</option><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select></div>
             <div class="field" style="margin:0;"><label>Anest. fuera qx</label>
               <select id="cfg-inter" onchange="buildSalasUI()" style="width:70px;"><option value="0">0</option><option value="1" selected>1</option><option value="2">2</option></select></div>
             <div class="field" style="margin:0;"><label>Oncología</label>
@@ -1842,9 +1851,17 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
 <div class="overlay" id="modal-cancelar-sala">
   <div class="modal" style="width:min(94vw,520px);">
     <div class="modal-hdr"><h3 id="sc-titulo">Cancelar sala</h3><button class="modal-x" onclick="closeModal('modal-cancelar-sala')">✕</button></div>
-    <div class="alert warn" style="margin:0 0 10px;font-size:11px;">La sala queda marcada como <strong>cancelada</strong>: sale del texto del programa y deja de figurar como asignacion de los anestesiologos. Se puede reactivar despues.</div>
+    <div class="alert warn" id="sc-aviso" style="margin:0 0 10px;font-size:11px;">La sala queda marcada como <strong>cancelada</strong>: sale del texto del programa y deja de figurar como asignacion de los anestesiologos. Se puede reactivar despues.</div>
     <div style="font-family:var(--mono);font-size:9px;color:#1a5cbf;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">Anestesiologos asignados</div>
     <div id="sc-asignados" style="font-size:11px;color:#0d1f35;margin-bottom:10px;"></div>
+    <div class="field"><label>Que se cancela</label>
+      <div class="sc-alcance">
+        <label><input type="radio" name="sc-alcance" value="completa" checked onchange="scAlcanceChanged()"><span>Jornada completa<small>12 h · la sala sale del programa</small></span></label>
+        <label><input type="radio" name="sc-alcance" value="am" onchange="scAlcanceChanged()"><span>Media jornada AM<small>6 h · 07:00–13:00</small></span></label>
+        <label><input type="radio" name="sc-alcance" value="pm" onchange="scAlcanceChanged()"><span>Media jornada PM<small>6 h · 13:00–19:00</small></span></label>
+      </div>
+      <div id="sc-alcance-hint" style="font-family:var(--mono);font-size:9px;color:#8aa8c0;margin-top:4px;"></div>
+    </div>
     <div class="field"><label>Motivo de la cancelacion</label>
       <select id="sc-cat" onchange="scCatChanged()">
         <option value="administrativo">Motivo administrativo</option>
@@ -1857,6 +1874,21 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
     </div>
     <div class="field"><label id="sc-detalle-lbl">Detalle (opcional)</label>
       <input type="text" id="sc-detalle" placeholder="Ej: Disminucion de programacion por festivo" maxlength="160">
+    </div>
+    <div class="field"><label>Compensacion de las horas</label>
+      <select id="sc-comp" onchange="scCompChanged()">
+        <option value="ninguna">Sin compensacion — horas perdidas</option>
+        <option value="consulta">Apertura rapida de consulta externa</option>
+        <option value="otra_sala">Reubicado en otra sala o servicio</option>
+        <option value="otra">Otra compensacion</option>
+      </select>
+    </div>
+    <div class="field" id="sc-comp-uid-row" style="display:none;"><label>Quien atiende la compensacion (opcional)</label>
+      <select id="sc-comp-uid" onchange="scCompChanged()"></select>
+      <div id="sc-efectivas" style="font-family:var(--mono);font-size:9px;color:#0a6a40;margin-top:4px;"></div>
+    </div>
+    <div class="field" id="sc-comp-det-row" style="display:none;"><label>Detalle de la compensacion (opcional)</label>
+      <input type="text" id="sc-comp-det" placeholder="Ej: Consultorio 3 de 13:00 a 19:00" maxlength="160">
     </div>
     <div class="field"><label>Observaciones (opcional)</label>
       <input type="text" id="sc-obs" placeholder="Notas internas..." maxlength="240">
@@ -2078,6 +2110,14 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.24.0',n:'Cancelar media jornada y registrar compensacion',f:'2026-10-30',cambios:[
+    'Nuevo: al cancelar una sala (boton ⊘) se elige que se cancela: jornada completa (12 h), media jornada AM (07–13) o media jornada PM (13–19).',
+    'Con media jornada la sala sigue activa con sus anestesiologos: la tarjeta muestra una franja ambar con la mitad cancelada, el motivo y la compensacion, y el texto del programa marca la sala como "SOLO AM" o "SOLO PM".',
+    'Nuevo: campo "Compensacion de las horas" — sin compensacion, apertura rapida de consulta externa, reubicado en otra sala o servicio, u otra — con quien la atiende (opcional) y un detalle.',
+    'Nuevo: en "Configuracion del dia" ahora se pueden elegir de 0 a 8 consultorios (antes el maximo era 2).',
+    'Horas efectivas: si la media jornada fue compensada, los anestesiologos de la sala conservan sus 12 h, la atienda quien la atienda; sin compensacion quedan con 6 h. Asi sale en la tarjeta, en "Mi asignacion ese dia", en el texto del programa (WhatsApp) y en las estadisticas, y el registro de la sala cancelada se conserva para el analisis.',
+    'Estadisticas → "Salas canceladas": nuevos indicadores de jornadas completas, medias jornadas, horas de quirofano canceladas, horas compensadas y horas perdidas, y columnas de alcance y compensacion. El Excel de estadisticas trae una hoja nueva "Salas canceladas" con todo el detalle para analisis.'
+  ]},
   {v:'2.23.0',n:'Año 2027 completo',f:'2026-10-30',cambios:[
     'Nuevo: se habilitan los cuatro trimestres de 2027 en "Cuadro" (pestañas Q1\'27 a Q4\'27) y en "Mi Disponibilidad". Antes solo existia Ene—Mar 2027 y la navegacion por meses —en el Cuadro y en el editor de cada anestesiologo— se detenia en marzo de 2027.',
     'El registro de disponibilidad de cada trimestre de 2027 se abre en la fecha de siempre: Q2 el 1 de marzo, Q3 el 1 de junio y Q4 el 1 de septiembre. El administrador puede verlos y editarlos desde ya.',
@@ -2778,6 +2818,12 @@ async function renderMiAsignacionDia(iso,cid){
   const salaCancMia=salaAsig?null:(APP.dist[iso]?.salas||[]).find(s=>s.cancelada&&(s.cancelada.users||[]).some(u=>u.uid===uid));
   if(salaAsig && miEntry){
     h+=`<div style="font-size:13px;font-weight:600;color:#1a5cbf;">${salaLabel(salaAsig)} — turno ${miEntry.turno||'dia'}</div>`;
+    if(salaAsig.canc_parcial){
+      const cp=salaAsig.canc_parcial;
+      h+=`<div style="font-size:11px;color:#7a4800;margin-top:2px;">Media jornada ${cp.alcance==='am'?'AM':'PM'} cancelada — ${salaCancMotivoTxt(cp,true)}${salaCancCompTxt(cp)?' · '+escHtml(salaCancCompTxt(cp)):''}</div>`;
+      const ef=salaHorasEfectivas(cp,miEntry);
+      h+=`<div style="font-size:12px;font-weight:600;color:#1a5cbf;margin-top:2px;">Tus horas efectivas: ${ef.efectivas} h${ef.compensa?' (incluye la compensacion)':''}</div>`;
+    }
   } else if(salaCancMia){
     const c=salaCancMia.cancelada;
     h+=`<div style="font-size:13px;font-weight:600;color:#8b1a1a;text-decoration:line-through;">${salaLabel(salaCancMia)}</div>`;
@@ -4908,6 +4954,7 @@ function buildSalasUI(){
       else if(p.user_id) s.users=[{uid:p.user_id,turno:p.turno||'dia'}];
       s.obs=p.obs||'';
       if(p.cancelada){ s.cancelada=p.cancelada; s.users=[]; }
+      if(p.canc_parcial&&!p.cancelada) s.canc_parcial=p.canc_parcial;
     }
   });
   renderSalas();
@@ -4974,6 +5021,7 @@ function renderSalas(){
           <span class="sala-canc-tag">CANCELADA</span>
           <div class="sala-canc-motivo">${salaCancMotivoTxt(c,verNombres)}</div>
           ${c.detalle?`<div class="sala-canc-det">${escHtml(c.detalle)}</div>`:''}
+          ${salaCancCompTxt(c)?`<div class="sala-canc-det" style="color:#0a6a40;font-weight:600;">${escHtml(salaCancCompTxt(c))}</div>`:''}
           ${(verNombres&&c.obs)?`<div class="sala-canc-det" style="font-style:italic;">${escHtml(c.obs)}</div>`:''}
           ${orig?`<div class="sala-canc-orig">${escHtml(orig)}</div>`:''}
           <div class="sala-canc-meta">${c.por_nombre?escHtml(c.por_nombre)+' · ':''}${c.en?fechaHoraBogota(c.en):''}</div>
@@ -4999,6 +5047,15 @@ function renderSalas(){
         </div>`;
       }).join('');
       if(sala.obs) bodyHtml+=`<div class="sala-obs" title="${escHtml(sala.obs)}">${escHtml(sala.obs)}</div>`;
+      if(sala.canc_parcial){
+        const cp=sala.canc_parcial;
+        const verN=salaCancPuedeVerNombres(cp);
+        const comp=salaCancCompTxt(cp);
+        bodyHtml+=`<div class="sala-parcial" title="${escHtml(SALA_CANC_ALC[cp.alcance]+' cancelada — '+(SALA_CANC_CAT[cp.categoria]||'')+(cp.detalle?' · '+cp.detalle:'')+(comp?' · '+comp:''))}">
+          <div class="sala-parcial-txt"><b>${cp.alcance==='am'?'AM':'PM'} CANCELADA · 6 h QUIROFANO</b><br>${salaCancMotivoTxt(cp,verN)}${cp.detalle?' · '+escHtml(cp.detalle):''}${comp?`<br><span style="color:#0a6a40;font-weight:600;">${escHtml(comp)}</span>`:''}${salaEfectivasTxt(cp,sala.users).map(t=>`<br><span style="color:#1a5cbf;font-weight:600;">${escHtml(t)}</span>`).join('')}</div>
+          ${APP.canEdit?`<button class="sala-ibtn" onclick="quitarCancParcial(${idx})" title="Quitar el registro de media jornada cancelada">${SALA_ICO_REACT}</button>`:''}
+        </div>`;
+      }
     } else {
       bodyHtml='<div class="sala-empty">Sin asignar</div>';
     }
@@ -5032,6 +5089,10 @@ function renderSalas(){
     }
     resHtml+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;"><span class="badge col">Con asignacion: ${conDoc}</span><span class="badge pend">Sin asignar: ${sinDoc}</span>${canceladas.length?`<span class="badge" style="background:#fbeaea;color:#8b1a1a;">Canceladas: ${canceladas.length}</span>`:''}<span class="badge sedar">Total salas: ${salasCur.length}</span></div>`;
     resHtml+=sinDoc===0?'<div class="alert succ" style="margin:0;">Todos los puestos activos cubiertos.</div>':'<div class="alert warn" style="margin:0;">Sin cubrir: '+salasCur.filter(s=>!s.cancelada&&(!s.users||!s.users.length)).map(s=>salaLabel(s)).join(', ')+'</div>';
+    const parciales=salasCur.filter(s=>!s.cancelada&&s.canc_parcial);
+    if(parciales.length){
+      resHtml+='<div class="alert" style="margin:8px 0 0;background:#fff7e6;color:#7a4800;border-color:#f0d49a;">Media jornada cancelada: '+parciales.map(s=>salaLabel(s)+' '+(s.canc_parcial.alcance==='am'?'AM':'PM')+(salaCancCompTxt(s.canc_parcial)?' — '+salaCancCompTxt(s.canc_parcial):'')).join(' · ')+'</div>';
+    }
     if(canceladas.length){
       resHtml+='<div class="alert" style="margin:8px 0 0;background:#fbeaea;color:#8b1a1a;border-color:#e0a8a8;">Canceladas: '+canceladas.map(s=>salaLabel(s)+' ('+salaCancMotivoTxt(s.cancelada,salaCancPuedeVerNombres(s.cancelada))+')').join(' · ')+'</div>';
     }
@@ -5265,6 +5326,87 @@ function autoAsignar(){ if(!APP.canEdit){toast('Sin permisos de edición','info'
 //  Reactivar devuelve los mismos anestesiologos a la sala.
 // ══════════════════════════════════════════════════════════════
 const SALA_CANC_CAT={administrativo:'Motivo administrativo',calamidad:'Calamidad del anestesiologo',otro:'Otro motivo'};
+// v2.24.0 — alcance (jornada completa o media jornada) y compensacion de horas
+const SALA_CANC_ALC={completa:'Jornada completa',am:'Media jornada AM',pm:'Media jornada PM'};
+const SALA_CANC_HORAS={completa:12,am:6,pm:6};
+const SALA_CANC_COMP={ninguna:'Sin compensacion',consulta:'Consulta externa',otra_sala:'Reubicado en otra sala/servicio',otra:'Otra compensacion'};
+function salaCancAlcance(c){return (c&&c.alcance)||'completa';}
+function salaCancHoras(c){return (c&&c.horas)||SALA_CANC_HORAS[salaCancAlcance(c)]||12;}
+function salaCancCompTxt(c){
+  if(!c||!c.comp||c.comp==='ninguna') return '';
+  return 'Compensada: '+(SALA_CANC_COMP[c.comp]||c.comp)+(c.comp_nombre?' — '+c.comp_nombre:'')+(c.comp_det?' ('+c.comp_det+')':'');
+}
+// Horas del turno asignado y cuantas de ellas caen en la parte cancelada.
+const TURNO_HORAS_SALA={dia:12,noche:12,guardia:24,h6m:6,h6t:6,cx:12,cxam:6,cxpm:6};
+const SALA_CANC_SOLAPE={
+  completa:{dia:12,guardia:12,h6m:6,h6t:6,cx:12,cxam:6,cxpm:6,noche:0},
+  am:{dia:6,guardia:6,h6m:6,h6t:0,cx:6,cxam:6,cxpm:0,noche:0},
+  pm:{dia:6,guardia:6,h6m:0,h6t:6,cx:6,cxam:0,cxpm:6,noche:0}
+};
+// Horas efectivas de un anestesiologo de la sala tras la cancelacion: pierde las
+// horas que se solapan con la parte cancelada, salvo que el mismo cubra la
+// compensacion (p.ej. abre consulta externa esa media jornada).
+// Si la cancelacion fue compensada (consulta externa, otra sala, etc.), los
+// anestesiologos de la sala conservan sus horas completas, sin importar quien
+// atienda fisicamente la compensacion (puede ser otro anestesiologo).
+function salaCompensaEste(c,u){
+  return !!(c&&c.comp&&c.comp!=='ninguna'&&u);
+}
+function salaHorasEfectivas(c,u){
+  const t=u.turno||'dia';
+  const h=TURNO_HORAS_SALA[t]??12;
+  const sol=(SALA_CANC_SOLAPE[salaCancAlcance(c)]||{})[t]??0;
+  const compensa=salaCompensaEste(c,u);
+  return {turno:h,cancel:sol,efectivas:h-sol+(compensa?sol:0),compensa};
+}
+// Texto "Nombre: 12 h efectivas" para los anestesiologos afectados
+function salaEfectivasTxt(c,users){
+  return (users||[]).map(u=>{
+    const e=salaHorasEfectivas(c,u);
+    if(!e.cancel) return null;
+    return `${nombreCorto(getP(u.uid),u)}: ${e.efectivas} h efectivas`+(e.compensa?' (jornada compensada)':'');
+  }).filter(Boolean);
+}
+function scAlcanceSel(){return document.querySelector('input[name="sc-alcance"]:checked')?.value||'completa';}
+function scAlcanceChanged(){
+  const a=scAlcanceSel();
+  const h=document.getElementById('sc-alcance-hint');
+  if(h) h.textContent=a==='completa'
+    ?'La sala queda cancelada todo el dia y los anestesiologos salen del programa.'
+    :`La sala sigue activa en la ${a==='am'?'tarde':'manana'}; queda registrada la ${a==='am'?'manana':'tarde'} cancelada (6 h).`;
+  const btn=document.getElementById('sc-btn-confirmar');
+  if(btn) btn.textContent=a==='completa'?'Cancelar sala y guardar':'Registrar media jornada y guardar';
+  scCompChanged();
+  const av=document.getElementById('sc-aviso');
+  if(av) av.innerHTML=a==='completa'
+    ?'La sala queda marcada como <strong>cancelada</strong>: sale del texto del programa y deja de figurar como asignacion de los anestesiologos. Se puede reactivar despues.'
+    :`Se registra la <strong>media jornada ${a==='am'?'AM':'PM'} cancelada</strong> para estadisticas. La sala y sus anestesiologos siguen en el programa (marcada como "SOLO ${a==='am'?'PM':'AM'}"). Se puede quitar despues.`;
+}
+function scCompChanged(){
+  const v=document.getElementById('sc-comp')?.value;
+  const on=!!(v&&v!=='ninguna');
+  const r=document.getElementById('sc-comp-det-row');if(r) r.style.display=on?'':'none';
+  const ru=document.getElementById('sc-comp-uid-row');if(ru) ru.style.display=on?'':'none';
+  // Vista previa de horas efectivas de los anestesiologos de la sala
+  const idx=parseInt(document.getElementById('sc-idx')?.value);
+  const sala=salasCur[idx];
+  const ef=document.getElementById('sc-efectivas');
+  if(sala&&ef){
+    const c={alcance:scAlcanceSel(),comp:v,comp_uid:on?(document.getElementById('sc-comp-uid')?.value||null):null};
+    const lineas=salaEfectivasTxt(c,sala.users||[]);
+    ef.style.color=on?'#0a6a40':'#8a5a00';
+    ef.textContent=lineas.join(' · ');
+    const efNo=document.getElementById('sc-efectivas-sin');
+  }
+}
+async function quitarCancParcial(idx){
+  if(!APP.canEdit){toast('Solo el administrador puede modificar salas','info');return;}
+  const sala=salasCur[idx];if(!sala||!sala.canc_parcial)return;
+  if(!confirm(`Quitar el registro de media jornada cancelada de ${salaLabel(sala)}?`))return;
+  delete sala.canc_parcial;
+  renderSalas();
+  await guardarDist();
+}
 function escHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 // Quien ve el nombre del anestesiologo con calamidad y las observaciones:
 // el administrador y el propio afectado. El resto ve solo la categoria.
@@ -5294,12 +5436,33 @@ function abrirCancelarSala(idx){
   if(sa) sa.innerHTML=users.length
     ? users.map(u=>`<option value="${u.uid}">${escHtml(nombreCorto(getP(u.uid),u))}</option>`).join('')
     : '<option value="">— Sin anestesiologos en esta sala —</option>';
-  document.getElementById('sc-cat').value='administrativo';
-  document.getElementById('sc-detalle').value='';
-  document.getElementById('sc-obs').value='';
+  const cu=document.getElementById('sc-comp-uid');
+  if(cu){
+    const enSala=users.map(u=>u.uid);
+    const otros=getDocs().filter(d=>!enSala.includes(d.id)).sort((a,b)=>(a.nombre+' '+a.apellidos).localeCompare(b.nombre+' '+b.apellidos));
+    cu.innerHTML='<option value="">— No especificar —</option>'+(users.length?'<option disabled>── De esta sala ──</option>':'')+
+      users.map(u=>`<option value="${u.uid}">${escHtml(nombreCorto(getP(u.uid),u))}</option>`).join('')+
+      '<option disabled>── Otro anestesiologo ──</option>'+
+      otros.map(d=>`<option value="${d.id}">${escHtml(d.nombre+' '+d.apellidos)}</option>`).join('');
+    cu.value='';
+  }
+  const prev=sala.canc_parcial||null;
+  document.getElementById('sc-cat').value=prev?.categoria||'administrativo';
+  document.getElementById('sc-detalle').value=prev?.detalle||'';
+  document.getElementById('sc-obs').value=prev?.obs||'';
+  document.getElementById('sc-comp').value=prev?.comp||'ninguna';
+  document.getElementById('sc-comp-det').value=prev?.comp_det||'';
+  const alc=prev?.alcance||'completa';
+  document.querySelectorAll('input[name="sc-alcance"]').forEach(r=>r.checked=(r.value===alc));
+  if(prev?.anest_uid) document.getElementById('sc-anest').value=prev.anest_uid;
+  if(prev?.comp_uid&&cu) cu.value=prev.comp_uid;
+  customizarSelect('sc-comp-uid');
   customizarSelect('sc-cat');
   customizarSelect('sc-anest');
+  customizarSelect('sc-comp');
   scCatChanged();
+  scAlcanceChanged();
+  scCompChanged();
   openModal('modal-cancelar-sala');
 }
 function scCatChanged(){
@@ -5326,7 +5489,16 @@ async function confirmarCancelarSala(){
     anestNombre=nombreCorto(getP(anestUid),u);
   }
   const yo=APP.perfil||getP(APP.user?.id);
-  sala.cancelada={
+  const alcance=scAlcanceSel();
+  const comp=document.getElementById('sc-comp').value||'ninguna';
+  const compDet=(document.getElementById('sc-comp-det').value||'').trim();
+  const reg={
+    alcance,
+    horas:SALA_CANC_HORAS[alcance],
+    comp,
+    comp_det:(comp!=='ninguna'&&compDet)?compDet:null,
+    comp_uid:comp!=='ninguna'?(document.getElementById('sc-comp-uid').value||null):null,
+    comp_nombre:comp!=='ninguna'?(()=>{const id=document.getElementById('sc-comp-uid').value;const u=(sala.users||[]).find(x=>x.uid===id);return id?nombreCorto(getP(id),u):null;})():null,
     categoria:cat,
     detalle:detalle||null,
     obs:obs||null,
@@ -5337,7 +5509,14 @@ async function confirmarCancelarSala(){
     por_nombre:yo?((yo.nombre||'')+' '+(yo.apellidos||'')).trim():null,
     en:new Date().toISOString()
   };
-  sala.users=[];sala.user_id=null;
+  if(alcance==='completa'){
+    sala.cancelada=reg;
+    delete sala.canc_parcial;
+    sala.users=[];sala.user_id=null;
+  } else {
+    // Media jornada: la sala sigue activa con sus anestesiologos; solo se registra la mitad cancelada
+    sala.canc_parcial=reg;
+  }
   closeModal('modal-cancelar-sala');
   renderSalas();
   await guardarDist();
@@ -5410,7 +5589,12 @@ function generarTextoProg(){
           urgencias.push({etiqueta:etiq,turno:turnoTxt,nombre});
         }
       } else if(sala.tipo==='sala'){
-        salas.push({etiqueta:`SALA ${sala.num}`,turno:turnoTxt,nombre});
+        const solo=sala.canc_parcial?(sala.canc_parcial.alcance==='am'?' (SOLO PM)':' (SOLO AM)'):'';
+        // Con media jornada cancelada, un turno de dia completo queda en 6 h de la mitad activa
+        const cp=sala.canc_parcial;
+        const compensaEl=salaCompensaEste(cp,u);
+        const turnoSala=(cp&&t==='dia'&&!compensaEl)?(cp.alcance==='am'?turnoLabel('h6t'):turnoLabel('h6m')):turnoTxt;
+        salas.push({etiqueta:`SALA ${sala.num}${solo}`,turno:turnoSala,nombre});
       } else if(sala.tipo==='consultorio'){
         consultorios.push({etiqueta:`CONSULTA EXTERNA`,turno:turnoTxt,nombre});
       } else if(sala.tipo==='interconsulta'){
@@ -7047,6 +7231,7 @@ function cancRangoActivo(){
   return cancRangoStats(document.getElementById('canc-f-periodo')?.value||'6');
 }
 let _salasCancToken=0;
+let _salasCancFilas=[];
 async function renderSalasCanceladasPanel(){
   const cont=document.getElementById('canc-salas-canceladas');if(!cont)return;
   const token=++_salasCancToken;
@@ -7062,29 +7247,49 @@ async function renderSalasCanceladasPanel(){
   const filas=[];
   (data||[]).forEach(d=>{
     (d.asignaciones||[]).forEach(s=>{
-      if(!s||!s.cancelada) return;
-      const c=s.cancelada;
-      if(anestId && c.anest_uid!==anestId && !(c.users||[]).some(u=>u.uid===anestId)) return;
-      filas.push({fecha:String(d.fecha).slice(0,10),sala:s,c});
+      if(!s) return;
+      const c=s.cancelada||s.canc_parcial;
+      if(!c) return;
+      const usersC=s.cancelada?(c.users||[]):(s.users||c.users||[]);
+      if(anestId && c.anest_uid!==anestId && !usersC.some(u=>u.uid===anestId)) return;
+      filas.push({fecha:String(d.fecha).slice(0,10),sala:s,c,usersC});
     });
   });
   filas.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  _salasCancFilas=filas;
   if(!filas.length){cont.innerHTML='<div class="empty-title" style="font-size:12px;">Sin salas canceladas en este periodo</div>';return;}
+  const hTot=filas.reduce((a,f)=>a+salaCancHoras(f.c),0);
+  const hComp=filas.filter(f=>f.c.comp&&f.c.comp!=='ninguna').reduce((a,f)=>a+salaCancHoras(f.c),0);
+  const nComp=filas.filter(f=>salaCancAlcance(f.c)==='completa').length;
+  const nMedia=filas.length-nComp;
+  const kpis=`<div class="stats" style="margin-bottom:10px;">
+    <div class="stat"><div class="stat-lbl">Jornadas completas</div><div class="stat-val" style="color:#8b1a1a;">${nComp}</div><div class="stat-sub">${nComp*12} h</div></div>
+    <div class="stat"><div class="stat-lbl">Medias jornadas</div><div class="stat-val" style="color:#8a5a00;">${nMedia}</div><div class="stat-sub">${nMedia*6} h</div></div>
+    <div class="stat"><div class="stat-lbl">Horas de quirofano canceladas</div><div class="stat-val">${hTot}</div><div class="stat-sub">programadas que no se realizaron</div></div>
+    <div class="stat green"><div class="stat-lbl">Horas compensadas</div><div class="stat-val" style="color:#0a6a40;">${hComp}</div><div class="stat-sub">${hTot?Math.round(hComp/hTot*100):0}% · consulta u otra sala</div></div>
+    <div class="stat"><div class="stat-lbl">Horas perdidas</div><div class="stat-val" style="color:#c0392b;">${hTot-hComp}</div><div class="stat-sub">sin compensacion</div></div>
+  </div>`;
   const porCat={};
   filas.forEach(f=>{const k=f.c.categoria||'otro';porCat[k]=(porCat[k]||0)+1;});
   const COL={administrativo:'#1a5cbf',calamidad:'#c0392b',otro:'#8a5a00'};
   const chips=Object.entries(porCat).sort((a,b)=>b[1]-a[1]).map(([k,n])=>
     `<span class="badge" style="background:#fff;border:1px solid ${COL[k]||'#8aa8c0'};color:${COL[k]||'#4e6c8a'};">${SALA_CANC_CAT[k]||k}: ${n}</span>`).join(' ');
-  cont.innerHTML=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"><span class="badge" style="background:#fbeaea;color:#8b1a1a;">Total: ${filas.length}</span> ${chips}</div>
+  cont.innerHTML=kpis+`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"><span class="badge" style="background:#fbeaea;color:#8b1a1a;">Total: ${filas.length}</span> ${chips}</div>
     <div style="overflow-x:auto;"><table class="tt" style="min-width:0;width:100%;">
-    <thead><tr><th>Fecha</th><th style="text-align:left;">Sala</th><th style="text-align:left;">Motivo</th><th style="text-align:left;">Detalle</th><th style="text-align:left;">Anestesiologos de la sala</th><th>Cancelada por</th></tr></thead>
+    <thead><tr><th>Fecha</th><th style="text-align:left;">Sala</th><th>Alcance</th><th style="text-align:left;">Motivo</th><th style="text-align:left;">Detalle</th><th style="text-align:left;">Compensacion</th><th style="text-align:left;">Horas efectivas</th><th style="text-align:left;">Anestesiologos de la sala</th><th>Registrado por</th></tr></thead>
     <tbody>${filas.map(f=>{
       const ver=salaCancPuedeVerNombres(f.c);
-      const anes=(f.c.users||[]).map(u=>nombreCorto(getP(u.uid),u)).join(', ');
+      const anes=(f.usersC||[]).map(u=>nombreCorto(getP(u.uid),u)).join(', ');
+      const alc=salaCancAlcance(f.c);
+      const compTxt=(f.c.comp&&f.c.comp!=='ninguna')?(SALA_CANC_COMP[f.c.comp]||f.c.comp)+(f.c.comp_nombre?' — '+f.c.comp_nombre:'')+(f.c.comp_det?' · '+f.c.comp_det:''):'';
+      const efTxt=salaEfectivasTxt(f.c,f.usersC).join('<br>');
       return `<tr><td style="font-family:var(--mono);font-size:10px;">${f.fecha}</td>
         <td style="text-align:left;">${salaLabel(f.sala)}</td>
+        <td style="font-family:var(--mono);font-size:9.5px;color:${alc==='completa'?'#8b1a1a':'#8a5a00'};font-weight:600;white-space:nowrap;">${alc==='completa'?'Completa · 12 h':(alc==='am'?'AM':'PM')+' · 6 h'}</td>
         <td style="text-align:left;color:${COL[f.c.categoria]||'#4e6c8a'};font-weight:600;">${salaCancMotivoTxt(f.c,ver)}</td>
         <td style="text-align:left;">${escHtml(f.c.detalle||'')}</td>
+        <td style="text-align:left;color:${compTxt?'#0a6a40':'#c0392b'};">${escHtml(compTxt||'Sin compensacion')}</td>
+        <td style="text-align:left;font-size:10px;color:#1a5cbf;">${efTxt||'—'}</td>
         <td style="text-align:left;">${escHtml(anes||'—')}</td>
         <td style="font-family:var(--mono);font-size:9px;">${escHtml(f.c.por_nombre||'')}${f.c.en?'<br>'+fechaHoraBogota(f.c.en):''}</td></tr>`;
     }).join('')}</tbody></table></div>`;
@@ -7353,6 +7558,19 @@ function exportarCancExcel(){
   XLSX.utils.book_append_sheet(wb,ws4,'Detalle');
 
   const hoy=toISO(new Date());
+  if((_salasCancFilas||[]).length){
+    const rs=[['Fecha','Sala','Alcance','Horas quirofano canceladas','Motivo','Anestesiologo con calamidad','Detalle','Compensacion','Atendida por','Detalle compensacion','Horas perdidas','Anestesiologos de la sala','Horas efectivas por anestesiologo','Registrado por','Fecha de registro']];
+    _salasCancFilas.forEach(f=>{
+      const c=f.c,alc=salaCancAlcance(c),h=salaCancHoras(c),comp=c.comp&&c.comp!=='ninguna';
+      rs.push([f.fecha,salaLabel(f.sala),SALA_CANC_ALC[alc],h,SALA_CANC_CAT[c.categoria]||c.categoria||'',
+        APP.isAdmin&&c.categoria==='calamidad'?(c.anest_nombre||''):'',c.detalle||'',
+        comp?(SALA_CANC_COMP[c.comp]||c.comp):'Sin compensacion',comp?(c.comp_nombre||''):'',comp?(c.comp_det||''):'',comp?0:h,
+        (f.usersC||[]).map(u=>nombreCorto(getP(u.uid),u)).join(', '),salaEfectivasTxt(c,f.usersC).join(' | '),c.por_nombre||'',c.en?fechaHoraBogota(c.en):'']);
+    });
+    const wsS=XLSX.utils.aoa_to_sheet(rs);
+    wsS['!cols']=[{wch:11},{wch:22},{wch:18},{wch:12},{wch:26},{wch:24},{wch:30},{wch:26},{wch:22},{wch:28},{wch:10},{wch:34},{wch:46},{wch:20},{wch:17}];
+    XLSX.utils.book_append_sheet(wb,wsS,'Salas canceladas');
+  }
   XLSX.writeFile(wb,`AgendaANS_Cancelaciones_${hoy}.xlsx`);
   toast('Excel de cancelaciones exportado','success');
 }
