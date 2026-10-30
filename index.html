@@ -1003,6 +1003,9 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
               <button class="btn" style="border:none;border-left:1px solid #c8d4e0;border-radius:0;" id="qtab-2" onclick="setCuadroTri(2)">Q3'26</button>
               <button class="btn" style="border:none;border-left:1px solid #c8d4e0;border-radius:0;" id="qtab-3" onclick="setCuadroTri(3)">Q4'26</button>
               <button class="btn" style="border:none;border-left:1px solid #c8d4e0;border-radius:0;" id="qtab-4" onclick="setCuadroTri(4)">Q1'27</button>
+              <button class="btn" style="border:none;border-left:1px solid #c8d4e0;border-radius:0;" id="qtab-5" onclick="setCuadroTri(5)">Q2'27</button>
+              <button class="btn" style="border:none;border-left:1px solid #c8d4e0;border-radius:0;" id="qtab-6" onclick="setCuadroTri(6)">Q3'27</button>
+              <button class="btn" style="border:none;border-left:1px solid #c8d4e0;border-radius:0;" id="qtab-7" onclick="setCuadroTri(7)">Q4'27</button>
             </div>
             <!-- Nav mes -->
             <div style="display:flex;align-items:center;gap:6px;border:1px solid #c8d4e0;border-radius:4px;padding:2px 4px;">
@@ -1090,6 +1093,9 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
           <button class="tri-tab" onclick="selTri(2,this)">Q3 Jul—Sep 2026</button>
           <button class="tri-tab" onclick="selTri(3,this)">Q4 Oct—Dic 2026</button>
           <button class="tri-tab" onclick="selTri(4,this)">Q1 Ene—Mar 2027</button>
+          <button class="tri-tab" onclick="selTri(5,this)">Q2 Abr—Jun 2027</button>
+          <button class="tri-tab" onclick="selTri(6,this)">Q3 Jul—Sep 2027</button>
+          <button class="tri-tab" onclick="selTri(7,this)">Q4 Oct—Dic 2027</button>
         </div>
         <div class="alert info" id="disp-alert">Selecciona un dia para registrar tu disponibilidad.</div>
         <div id="disp-grid"></div>
@@ -2072,6 +2078,11 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.23.0',n:'Año 2027 completo',f:'2026-10-30',cambios:[
+    'Nuevo: se habilitan los cuatro trimestres de 2027 en "Cuadro" (pestañas Q1\'27 a Q4\'27) y en "Mi Disponibilidad". Antes solo existia Ene—Mar 2027 y la navegacion por meses —en el Cuadro y en el editor de cada anestesiologo— se detenia en marzo de 2027.',
+    'El registro de disponibilidad de cada trimestre de 2027 se abre en la fecha de siempre: Q2 el 1 de marzo, Q3 el 1 de junio y Q4 el 1 de septiembre. El administrador puede verlos y editarlos desde ya.',
+    'Se agregaron todos los festivos oficiales de Colombia de 2027, calculados con la misma regla que los de 2026 (incluye Semana Santa, festivos trasladados a lunes y Virgen de Chiquinquira).'
+  ]},
   {v:'2.22.0',n:'Tarjetas de sala mas proporcionadas',f:'2026-10-30',cambios:[
     'Mejorado: en "Distribucion de Salas" todas las tarjetas tienen el mismo ancho y un encabezado de altura fija; el nombre de la sala ya no se parte en dos renglones.',
     'Los botones Editar y Cancelar sala ahora son iconos del mismo tamano (lapiz y ⊘), con su descripcion al pasar el mouse.',
@@ -2214,7 +2225,7 @@ const TL={dia:'Dia 07-19h',noche:'Noche 19-07h',guardia:'24h',h6m:'6h Man',h6t:'
 const FESTIVOS_2026=['2026-01-01','2026-01-12','2026-03-23','2026-04-02','2026-04-03','2026-05-01','2026-05-18','2026-06-08','2026-06-15','2026-06-29','2026-07-13','2026-07-20','2026-08-07','2026-08-17','2026-10-12','2026-11-02','2026-11-16','2026-12-08','2026-12-25'];
 // Festivos Colombia 2027 — por ahora solo Ene-Mar (unico trimestre habilitado
 // de ese año). Completar Abr-Dic cuando se habiliten esos trimestres.
-const FESTIVOS_2027=['2027-01-01','2027-01-11','2027-03-22','2027-03-25','2027-03-26'];
+const FESTIVOS_2027=['2027-01-01','2027-01-11','2027-03-22','2027-03-25','2027-03-26','2027-05-01','2027-05-10','2027-05-31','2027-06-07','2027-07-05','2027-07-12','2027-07-20','2027-08-07','2027-08-16','2027-10-18','2027-11-01','2027-11-15','2027-12-08','2027-12-25'];
 // Cada trimestre lleva su propio "anio" para poder distinguir, por ejemplo,
 // el Q1 de 2026 del Q1 de 2027 (ambos usan los mismos meses 0,1,2). Agregar
 // un trimestre nuevo aqui (con su anio correcto) es lo unico que hace falta
@@ -2225,6 +2236,9 @@ const TRIMESTRES=[
   {id:'Q3',label:'Jul—Sep',anio:2026,meses:[6,7,8],desde:'2026-07-01',abre:'2026-06-01'},
   {id:'Q4',label:'Oct—Dic',anio:2026,meses:[9,10,11],desde:'2026-10-01',abre:'2026-09-01'},
   {id:'Q1',label:'Ene—Mar',anio:2027,meses:[0,1,2],desde:'2027-01-01',abre:'2026-12-01'},
+  {id:'Q2',label:'Abr—Jun',anio:2027,meses:[3,4,5],desde:'2027-04-01',abre:'2027-03-01'},
+  {id:'Q3',label:'Jul—Sep',anio:2027,meses:[6,7,8],desde:'2027-07-01',abre:'2027-06-01'},
+  {id:'Q4',label:'Oct—Dic',anio:2027,meses:[9,10,11],desde:'2027-10-01',abre:'2027-09-01'},
 ];
 
 let calY=new Date().getFullYear(),calM=new Date().getMonth(),calFiltro='all';
