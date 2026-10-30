@@ -365,6 +365,47 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
 .doc-name{font-size:11px;font-weight:500;color:#0d1f35;}
 .doc-info{font-family:var(--mono);font-size:8px;color:#4e6c8a;}
 .sala-empty{font-family:var(--mono);font-size:9px;color:#8aa8c0;text-align:center;padding:8px 0;}
+/* Sala cancelada (v2.21.0) */
+.sala-card.cancelada{border-color:#e0a8a8;}
+.sala-card.cancelada .sala-hdr{background:#fbeaea;border-bottom:1px solid #e0a8a8;}
+.sala-card.cancelada .sala-name{color:#8b1a1a;text-decoration:line-through;}
+.sala-card.cancelada .sala-body{background:#fffafa;}
+.sala-canc-tag{display:inline-block;font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.6px;color:#fff;background:#8b1a1a;border-radius:2px;padding:1px 5px;margin-bottom:4px;}
+.sala-canc-motivo{font-size:10px;font-weight:600;color:#8b1a1a;line-height:1.3;}
+.sala-canc-det{font-size:10px;color:#4e6c8a;margin-top:2px;line-height:1.3;}
+.sala-canc-orig{font-size:10px;color:#9ab0c8;text-decoration:line-through;margin-top:3px;}
+.sala-canc-meta{font-family:var(--mono);font-size:8px;color:#9ab0c8;margin-top:4px;}
+.sala-hdr-btns{display:flex;gap:4px;align-items:center;flex-shrink:0;}
+/* ── Tarjetas de sala v2.22.0: proporciones uniformes ── */
+#salas-grid.salas-grid{grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px;}
+#salas-grid .sala-card{display:flex;flex-direction:column;background:#fff;border-radius:6px;}
+#salas-grid .sala-hdr{height:42px;padding:0 8px 0 12px;gap:8px;box-sizing:border-box;}
+#salas-grid .sala-ttl{flex:1;min-width:0;}
+#salas-grid .sala-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sala-ibtn{width:28px;height:26px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:1px solid #c8d4e0;background:#fff;border-radius:4px;cursor:pointer;color:#2d4a68;transition:all .12s;}
+.sala-ibtn:hover{border-color:#1a5cbf;color:#1a5cbf;background:#f4f8fd;}
+.sala-ibtn.dng{color:#a33;border-color:#e6c4c4;}
+.sala-ibtn.dng:hover{background:#fbeaea;border-color:#c0392b;color:#8b1a1a;}
+.sala-ibtn svg{width:13px;height:13px;}
+#salas-grid .sala-body{flex:1;padding:4px 10px 8px;min-height:64px;}
+.sala-row{display:flex;align-items:center;gap:7px;height:30px;border-bottom:1px solid #edf2f7;}
+.sala-row:last-of-type{border-bottom:none;}
+.sala-row .doc-av{width:22px;height:22px;font-size:8px;}
+.sala-row.yo{background:#e9f7f1;margin:0 -10px;padding:0 10px;border-bottom-color:#cdeadd;}
+.sala-row-nom{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;font-weight:500;color:#0d1f35;}
+.sala-emp{flex-shrink:0;font-family:var(--mono);font-size:8px;color:#8aa8c0;letter-spacing:.3px;}
+.sala-emp.ime{color:#b45309;font-weight:700;}
+.sala-chip{flex-shrink:0;min-width:24px;text-align:center;font-family:var(--mono);font-size:8.5px;font-weight:700;padding:2px 5px;border-radius:3px;color:#fff;letter-spacing:.3px;}
+.sala-obs{font-size:9.5px;color:#8aa8c0;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#salas-grid .sala-card.vacia .sala-hdr{background:#f0f4f9;border-bottom:1px solid #c8d4e0;}
+#salas-grid .sala-card.vacia{border-style:dashed;}
+#salas-grid .sala-card.vacia .sala-body{display:flex;align-items:center;justify-content:center;}
+#salas-grid .sala-card.mi-sala{box-shadow:inset 3px 0 0 #0a9e72;}
+.canc-pac-search{display:flex;align-items:center;gap:4px;border:1px solid #c8d4e0;border-radius:4px;padding:0 4px 0 8px;background:#fff;}
+.canc-pac-search input{padding:6px 4px;border:none;font-family:var(--mono);font-size:10px;color:#2d4a68;background:transparent;width:210px;outline:none;}
+.canc-pac-search.activo{border-color:#1a5cbf;box-shadow:0 0 0 2px rgba(26,92,191,.1);}
+.canc-pac-row{cursor:pointer;}
+.canc-pac-row:hover td{background:#f0f6fd;}
 
 /* Doc list */
 .doc-list{display:flex;flex-direction:column;gap:6px;}
@@ -1395,6 +1436,11 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
             <select id="canc-f-anest" onchange="renderCancStats()" style="padding:6px 10px;border:1px solid #c8d4e0;border-radius:4px;font-family:var(--mono);font-size:10px;color:#2d4a68;max-width:220px;">
               <option value="">Todos los anestesiologos</option>
             </select>
+            <div class="canc-pac-search" id="canc-f-paciente-wrap" title="Busca por nombre del paciente o por numero de documento (no distingue tildes ni mayusculas)">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8aa8c0" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
+              <input type="search" id="canc-f-paciente" placeholder="Paciente: nombre o documento" autocomplete="off" oninput="cancPacienteInput()">
+              <button type="button" id="canc-f-paciente-clear" onclick="cancPacienteLimpiar()" title="Quitar filtro de paciente" style="display:none;border:none;background:none;color:#8b1a1a;font-size:13px;cursor:pointer;padding:2px 4px;">✕</button>
+            </div>
             <div style="flex:1;"></div>
             <button class="btn sm" style="color:#0a6a40;border-color:#0a6a40;" onclick="exportarCancExcel()">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
@@ -1404,6 +1450,10 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               Exportar PDF
             </button>
+          </div>
+          <div class="panel-box" id="canc-paciente-box" style="display:none;">
+            <h3 id="canc-paciente-titulo">Casos del paciente</h3>
+            <div id="canc-paciente-resultados"></div>
           </div>
           <div class="stats" id="canc-stats-kpi"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
@@ -1416,6 +1466,11 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
           </div>
           <div class="panel-box" id="canc-por-anest-box"><h3>Por anestesiologo</h3><div id="canc-por-anest"></div></div>
           <div class="panel-box"><h3 id="canc-tendencia-titulo">Tendencia mensual</h3><div id="canc-tendencia"></div></div>
+          <div class="panel-box" id="canc-salas-box">
+            <h3>Salas canceladas de la programacion</h3>
+            <div style="font-family:var(--mono);font-size:9px;color:#8aa8c0;margin:-4px 0 8px;">Salas ya asignadas que se cancelaron desde "Distribucion de Salas" (no son cancelaciones de pacientes). Respeta el periodo y el filtro de anestesiologo.</div>
+            <div id="canc-salas-canceladas"><div class="empty-title" style="font-size:12px;">Cargando…</div></div>
+          </div>
         </div>
       </div>
 
@@ -1777,6 +1832,38 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
   </div>
 </div>
 
+<!-- MODAL CANCELAR SALA (v2.21.0) -->
+<div class="overlay" id="modal-cancelar-sala">
+  <div class="modal" style="width:min(94vw,520px);">
+    <div class="modal-hdr"><h3 id="sc-titulo">Cancelar sala</h3><button class="modal-x" onclick="closeModal('modal-cancelar-sala')">✕</button></div>
+    <div class="alert warn" style="margin:0 0 10px;font-size:11px;">La sala queda marcada como <strong>cancelada</strong>: sale del texto del programa y deja de figurar como asignacion de los anestesiologos. Se puede reactivar despues.</div>
+    <div style="font-family:var(--mono);font-size:9px;color:#1a5cbf;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">Anestesiologos asignados</div>
+    <div id="sc-asignados" style="font-size:11px;color:#0d1f35;margin-bottom:10px;"></div>
+    <div class="field"><label>Motivo de la cancelacion</label>
+      <select id="sc-cat" onchange="scCatChanged()">
+        <option value="administrativo">Motivo administrativo</option>
+        <option value="calamidad">Calamidad del anestesiologo</option>
+        <option value="otro">Otro motivo</option>
+      </select>
+    </div>
+    <div class="field" id="sc-anest-row" style="display:none;"><label>Anestesiologo con la calamidad</label>
+      <select id="sc-anest"></select>
+    </div>
+    <div class="field"><label id="sc-detalle-lbl">Detalle (opcional)</label>
+      <input type="text" id="sc-detalle" placeholder="Ej: Disminucion de programacion por festivo" maxlength="160">
+    </div>
+    <div class="field"><label>Observaciones (opcional)</label>
+      <input type="text" id="sc-obs" placeholder="Notas internas..." maxlength="240">
+    </div>
+    <input type="hidden" id="sc-idx">
+    <div class="modal-actions">
+      <div style="flex:1"></div>
+      <button class="btn" onclick="closeModal('modal-cancelar-sala')">Volver</button>
+      <button class="btn dang" id="sc-btn-confirmar" onclick="confirmarCancelarSala()">Cancelar sala y guardar</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- CONTENEDOR IMPRESION INDIVIDUAL -->
@@ -1985,6 +2072,20 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.22.0',n:'Tarjetas de sala mas proporcionadas',f:'2026-10-30',cambios:[
+    'Mejorado: en "Distribucion de Salas" todas las tarjetas tienen el mismo ancho y un encabezado de altura fija; el nombre de la sala ya no se parte en dos renglones.',
+    'Los botones Editar y Cancelar sala ahora son iconos del mismo tamano (lapiz y ⊘), con su descripcion al pasar el mouse.',
+    'Cada anestesiologo ocupa un solo renglon: primer nombre y primer apellido, empresa y una etiqueta de color con el turno (D, N, 24h, 6M, 6T). El nombre completo aparece al pasar el mouse. Asi, con 2, 3 o mas anestesiologos en una sala, quedan alineados.',
+    'Tu propio renglon se resalta en verde y la tarjeta de tu sala lleva una franja verde a la izquierda.',
+    'Corregido: la tarjeta de una sala sin asignar se veia descuadrada (con un recuadro interno) porque compartia nombre de estilo con otro elemento de la app.'
+  ]},
+  {v:'2.21.0',n:'Cancelar salas planificadas y buscar pacientes',f:'2026-10-30',cambios:[
+    'Nuevo: en "Distribucion de Salas" cada sala tiene un boton ⊘ para cancelarla aunque ya tenga anestesiologos asignados. Se elige el motivo: administrativo, calamidad del anestesiologo (indicando cual de los asignados) u otro, con detalle y observaciones. Se guarda de inmediato.',
+    'La sala cancelada queda visible en rojo con el motivo y los anestesiologos que tenia, y se puede "Reactivar" con los mismos anestesiologos. No cuenta como "Sin cubrir", sale del texto del programa como SALA CANCELADA y deja de aparecer como asignacion en Calendario y "Mi asignacion ese dia" (el anestesiologo ve que su sala fue cancelada y por que).',
+    'El nombre del anestesiologo con calamidad y las observaciones solo los ven el administrador y el propio afectado; los demas ven unicamente la categoria del motivo.',
+    'Nuevo: en Estadisticas de Cancelaciones, buscador por nombre del paciente o numero de documento (sin importar tildes, mayusculas, puntos o guiones). Muestra la lista de casos del paciente (clic para ver el detalle) y todas las cifras, barras y exportaciones se ajustan a la busqueda.',
+    'Nuevo: panel "Salas canceladas de la programacion" en Estadisticas, con el total por motivo y el detalle por fecha, segun el periodo y el anestesiologo filtrados.'
+  ]},
   {v:'2.20.0',n:'Habilitado el primer trimestre de 2027',f:'2026-09-23',cambios:[
     'Nuevo: se agrego el trimestre Ene—Mar 2027 tanto en "Mi Disponibilidad" (para que cada anestesiologo registre sus turnos) como en "Cuadro" (para que el administrador lo revise, edite y exporte) — antes la app solo funcionaba para el año 2026.',
     'El Calendario, la Distribucion de Salas y el registro de cancelaciones ya eran continuos entre años; ahora "Mi Disponibilidad" y "Cuadro" tambien lo son. La navegacion mes a mes cruza automaticamente de diciembre 2026 a enero 2027 sin confundir los meses.',
@@ -2660,8 +2761,13 @@ async function renderMiAsignacionDia(iso,cid){
   // Mi asignacion de sala (si la hubo)
   h+='<div style="border-top:1px solid #e2e8f0;padding-top:10px;">';
   h+='<div style="font-family:var(--mono);font-size:9px;color:#4e6c8a;text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;">Mi asignacion ese dia</div>';
+  const salaCancMia=salaAsig?null:(APP.dist[iso]?.salas||[]).find(s=>s.cancelada&&(s.cancelada.users||[]).some(u=>u.uid===uid));
   if(salaAsig && miEntry){
     h+=`<div style="font-size:13px;font-weight:600;color:#1a5cbf;">${salaLabel(salaAsig)} — turno ${miEntry.turno||'dia'}</div>`;
+  } else if(salaCancMia){
+    const c=salaCancMia.cancelada;
+    h+=`<div style="font-size:13px;font-weight:600;color:#8b1a1a;text-decoration:line-through;">${salaLabel(salaCancMia)}</div>`;
+    h+=`<div style="font-size:11px;color:#8b1a1a;margin-top:2px;">Sala cancelada — ${salaCancMotivoTxt(c,true)}${c.detalle?' · '+escHtml(c.detalle):''}</div>`;
   } else {
     h+='<div style="font-size:13px;color:#9ab0c8;">Sin asignacion registrada</div>';
   }
@@ -2743,7 +2849,8 @@ function renderResumenDia(iso,cid){
     const entries=users.length?users:(s.user_id?[{uid:s.user_id,turno:s.turno||'dia'}]:[]);
     if(!entries.length){
       rowNum++;
-      h+=`<div class="resumen-row"><span class="resumen-num">${rowNum}</span>${salaBadge(s)}<span class="resumen-doc resumen-empty">Sin asignar</span></div>`;
+      const txtVacio=s.cancelada?`<span style="color:#8b1a1a;font-weight:600;">Cancelada</span> <span style="font-size:10px;color:#8aa8c0;">${salaCancMotivoTxt(s.cancelada,salaCancPuedeVerNombres(s.cancelada))}</span>`:'Sin asignar';
+      h+=`<div class="resumen-row"><span class="resumen-num">${rowNum}</span>${salaBadge(s)}<span class="resumen-doc resumen-empty">${txtVacio}</span></div>`;
       return;
     }
     entries.forEach(u=>{
@@ -3670,7 +3777,8 @@ function exportarExcel(){
     salas.forEach(sala=>{
       const users=sala.users||[];
       if(!users.length){
-        rowsSal.push([iso,DN2[dt.getDay()],salaLabel(sala),sala.tipo,'','Sin asignar','','','','','','','','','','']);
+        const txtVacioX=sala.cancelada?('CANCELADA — '+(SALA_CANC_CAT[sala.cancelada.categoria]||'')+(sala.cancelada.categoria==='calamidad'&&sala.cancelada.anest_nombre?' ('+sala.cancelada.anest_nombre+')':'')+(sala.cancelada.detalle?' · '+sala.cancelada.detalle:'')):'Sin asignar';
+        rowsSal.push([iso,DN2[dt.getDay()],salaLabel(sala),sala.tipo,'',txtVacioX,'','','','','','','','','','']);
         return;
       }
       users.forEach(u=>{
@@ -4785,6 +4893,7 @@ function buildSalasUI(){
       if(p.users&&Array.isArray(p.users)) s.users=p.users;
       else if(p.user_id) s.users=[{uid:p.user_id,turno:p.turno||'dia'}];
       s.obs=p.obs||'';
+      if(p.cancelada){ s.cancelada=p.cancelada; s.users=[]; }
     }
   });
   renderSalas();
@@ -4809,6 +4918,24 @@ function salaTC(sala){
   const M={sala:'qx',consultorio:'cx',interconsulta:'ic',oncologia:'onc',sedacion:'sed',urgencias:'urg'};
   return M[sala.tipo]||'qx';
 }
+// ── Presentacion de tarjetas de sala (v2.22.0) ──
+const SALA_TURNO_CHIP={dia:['D','#1a5cbf'],noche:['N','#1a1a6e'],guardia:['24h','#4a2a8a'],h6m:['6M','#0a7a4a'],h6t:['6T','#5a8a0a'],cx:['CE','#d97706'],cxam:['CE-M','#d97706'],cxpm:['CE-T','#d97706']};
+function salaTurnoChip(t){
+  const [lbl,col]=SALA_TURNO_CHIP[t||'dia']||[String(t||'').toUpperCase(),'#4e6c8a'];
+  return `<span class="sala-chip" style="background:${col};" title="Turno: ${escHtml(turnoLabel(t||'dia'))}">${lbl}</span>`;
+}
+// Nombre corto (primer nombre + primer apellido) para que cada anestesiologo
+// ocupe un solo renglon; el nombre completo queda en el tooltip.
+function salaNombreCorto(doc,u){
+  if(!doc) return '—';
+  if(isIME(doc)) return nombreIME(doc,u,'IME — pendiente');
+  const n=(doc.nombre||'').trim().split(/\s+/)[0]||'';
+  const a=(doc.apellidos||'').trim().split(/\s+/)[0]||'';
+  return (n+' '+a).trim();
+}
+const SALA_ICO_EDIT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+const SALA_ICO_CANC='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg>';
+const SALA_ICO_REACT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 3 3 9 9 9"/></svg>';
 function renderSalas(){
   const grid=document.getElementById('salas-grid');if(!grid)return;grid.innerHTML='';
   const miId=APP.user?.id;
@@ -4821,57 +4948,79 @@ function renderSalas(){
     const esMia=users.some(u=>u.uid===miId);
     const hasDoc=entries.length>0;
     const card=document.createElement('div');
-    card.className='sala-card '+(hasDoc?tc:tc+' empty')+(esMia?' mi-sala':'');
-    const btnEditar=APP.canEdit?`<button class="btn sm" onclick="editSala(${idx})">Editar</button>`:'';
-    const miEntry=users.find(u=>u.uid===miId);
+    if(sala.cancelada){
+      card.className='sala-card cancelada';
+      const c=sala.cancelada;
+      const verNombres=salaCancPuedeVerNombres(c);
+      const orig=(c.users||[]).map(u=>nombreCorto(getP(u.uid),u)).join(', ');
+      const btnReact=APP.canEdit?`<button class="sala-ibtn" onclick="reactivarSala(${idx})" title="Reactivar la sala con los mismos anestesiologos">${SALA_ICO_REACT}</button>`:'';
+      card.innerHTML=`
+        <div class="sala-hdr"><div class="sala-ttl"><div class="sala-name" title="${tl} — cancelada">${tl}</div></div><div class="sala-hdr-btns">${btnReact}</div></div>
+        <div class="sala-body" style="padding-top:8px;">
+          <span class="sala-canc-tag">CANCELADA</span>
+          <div class="sala-canc-motivo">${salaCancMotivoTxt(c,verNombres)}</div>
+          ${c.detalle?`<div class="sala-canc-det">${escHtml(c.detalle)}</div>`:''}
+          ${(verNombres&&c.obs)?`<div class="sala-canc-det" style="font-style:italic;">${escHtml(c.obs)}</div>`:''}
+          ${orig?`<div class="sala-canc-orig">${escHtml(orig)}</div>`:''}
+          <div class="sala-canc-meta">${c.por_nombre?escHtml(c.por_nombre)+' · ':''}${c.en?fechaHoraBogota(c.en):''}</div>
+        </div>`;
+      grid.appendChild(card);
+      return;
+    }
+    card.className='sala-card '+(hasDoc?tc:tc+' vacia')+(esMia?' mi-sala':'');
+    const btnEditar=APP.canEdit?`<div class="sala-hdr-btns"><button class="sala-ibtn" onclick="editSala(${idx})" title="Editar asignacion">${SALA_ICO_EDIT}</button><button class="sala-ibtn dng" onclick="abrirCancelarSala(${idx})" title="Cancelar sala (administrativo, calamidad del anestesiologo u otro)">${SALA_ICO_CANC}</button></div>`:'';
     let bodyHtml='';
     if(entries.length){
       bodyHtml=entries.map(({u,doc})=>{
         const esIme=isIME(doc);
-        const nombre=esIme?nombreIME(doc,u,'IME — pendiente'):(doc.nombre+' '+doc.apellidos);
-        const imeBadge=esIme?` <span class="badge ime" style="font-size:7px;padding:1px 4px;">IME</span>`:'';
-        const info=(u.turno||'dia')+' · '+empresaStr(doc)+(esIme&&u.cedula?' · CC '+u.cedula:'');
-        return `<div class="sala-doc" style="padding:3px 0;border-bottom:1px solid #edf2f7;">
-          <div class="doc-av ${avCls(doc)}" style="width:22px;height:22px;font-size:9px;${esIme?'background:#f59e0b;color:#fff;':''}">${inics(doc)}</div>
-          <div>
-            <div class="doc-name" style="font-size:11px;">${nombre}${imeBadge}</div>
-            <div class="doc-info">${info}</div>
-          </div>
+        const completo=esIme?nombreIME(doc,u,'IME — pendiente'):(doc.nombre+' '+doc.apellidos);
+        const corto=salaNombreCorto(doc,u);
+        const esYo=u.uid===miId;
+        const tip=`${completo} · ${turnoLabel(u.turno||'dia')} · ${empresaStr(doc)}${esIme&&u.cedula?' · CC '+u.cedula:''}${esYo?' (tu)':''}`;
+        return `<div class="sala-row${esYo?' yo':''}" title="${escHtml(tip)}">
+          <div class="doc-av ${avCls(doc)}" style="${esIme?'background:#f59e0b;color:#fff;':''}">${inics(doc)}</div>
+          <div class="sala-row-nom">${escHtml(corto)}</div>
+          <span class="sala-emp${esIme?' ime':''}">${empresaStr(doc)}</span>
+          ${salaTurnoChip(u.turno)}
         </div>`;
       }).join('');
-      if(sala.obs) bodyHtml+=`<div style="font-size:8px;color:#8aa8c0;margin-top:3px;">${sala.obs}</div>`;
+      if(sala.obs) bodyHtml+=`<div class="sala-obs" title="${escHtml(sala.obs)}">${escHtml(sala.obs)}</div>`;
     } else {
       bodyHtml='<div class="sala-empty">Sin asignar</div>';
     }
     card.innerHTML=`
-      <div class="sala-hdr"${esMia?' style="border-left:3px solid #0a9e72;"':''}>
-        <div>
-          <div class="sala-name">${tl}</div>
-          ${esMia?`<div style="font-size:9px;font-family:var(--mono);color:#0a9e72;margin-top:1px;">← Tu turno: ${miEntry?.turno||'dia'}</div>`:''}
-        </div>
+      <div class="sala-hdr">
+        <div class="sala-ttl"><div class="sala-name" title="${tl}">${tl}</div></div>
         ${btnEditar}
       </div>
-      <div class="sala-body" style="padding:6px 12px;">${bodyHtml}</div>`;
+      <div class="sala-body">${bodyHtml}</div>`;
     grid.appendChild(card);
   });
   // Resumen completo para todos (admin y anestesiologo)
   // El anestesiologo ve el mismo resumen pero con su sala destacada arriba
-  const conDoc=salasCur.filter(s=>s.users&&s.users.length>0).length;
-  const sinDoc=salasCur.length-conDoc;
+  const canceladas=salasCur.filter(s=>s.cancelada);
+  const conDoc=salasCur.filter(s=>!s.cancelada&&s.users&&s.users.length>0).length;
+  const sinDoc=salasCur.length-conDoc-canceladas.length;
   const dr=document.getElementById('dist-resumen');
   if(dr){
     let resHtml='';
     if(!APP.isAdmin){
       const miSala=salasCur.find(s=>(s.users||[]).some(u=>u.uid===miId));
+      const miSalaCanc=miSala?null:salasCur.find(s=>s.cancelada&&(s.cancelada.users||[]).some(u=>u.uid===miId));
       if(miSala){
         const miU=(miSala.users||[]).find(u=>u.uid===miId);
         resHtml+=`<div class="alert succ" style="margin:0 0 8px;font-size:12px;">Tu asignacion: <strong>${salaLabel(miSala)}</strong> — Turno: <strong>${miU?.turno||'dia'}</strong></div>`;
+      }else if(miSalaCanc){
+        resHtml+=`<div class="alert warn" style="margin:0 0 8px;font-size:12px;">Tu asignacion en <strong>${salaLabel(miSalaCanc)}</strong> fue <strong>cancelada</strong> — ${salaCancMotivoTxt(miSalaCanc.cancelada,true)}${miSalaCanc.cancelada.detalle?' ('+escHtml(miSalaCanc.cancelada.detalle)+')':''}.</div>`;
       }else{
         resHtml+=`<div class="alert warn" style="margin:0 0 8px;">No tienes asignacion para este dia.</div>`;
       }
     }
-    resHtml+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;"><span class="badge col">Con asignacion: ${conDoc}</span><span class="badge pend">Sin asignar: ${sinDoc}</span><span class="badge sedar">Total salas: ${salasCur.length}</span></div>`;
-    resHtml+=sinDoc===0?'<div class="alert succ" style="margin:0;">Todos los puestos cubiertos.</div>':'<div class="alert warn" style="margin:0;">Sin cubrir: '+salasCur.filter(s=>!s.users||!s.users.length).map(s=>salaLabel(s)).join(', ')+'</div>';
+    resHtml+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;"><span class="badge col">Con asignacion: ${conDoc}</span><span class="badge pend">Sin asignar: ${sinDoc}</span>${canceladas.length?`<span class="badge" style="background:#fbeaea;color:#8b1a1a;">Canceladas: ${canceladas.length}</span>`:''}<span class="badge sedar">Total salas: ${salasCur.length}</span></div>`;
+    resHtml+=sinDoc===0?'<div class="alert succ" style="margin:0;">Todos los puestos activos cubiertos.</div>':'<div class="alert warn" style="margin:0;">Sin cubrir: '+salasCur.filter(s=>!s.cancelada&&(!s.users||!s.users.length)).map(s=>salaLabel(s)).join(', ')+'</div>';
+    if(canceladas.length){
+      resHtml+='<div class="alert" style="margin:8px 0 0;background:#fbeaea;color:#8b1a1a;border-color:#e0a8a8;">Canceladas: '+canceladas.map(s=>salaLabel(s)+' ('+salaCancMotivoTxt(s.cancelada,salaCancPuedeVerNombres(s.cancelada))+')').join(' · ')+'</div>';
+    }
     dr.innerHTML=resHtml;
   }
 }
@@ -4948,6 +5097,7 @@ function etiquetaOferta(turnosOfertados){
 function editSala(idx){
   if(!APP.canEdit){toast('Solo el administrador puede asignar salas','info');return;}
   const sala=salasCur[idx];
+  if(sala.cancelada){toast('Esta sala esta cancelada — reactivala primero para editarla','info');return;}
   document.getElementById('ms-titulo').textContent=salaLabel(sala);
   document.getElementById('ms-idx').value=idx;
   document.getElementById('ms-obs').value=sala.obs||'';
@@ -5080,12 +5230,118 @@ function limpiarSala(){
 }
 function autoAsignar(){ if(!APP.canEdit){toast('Sin permisos de edición','info');return;}
   const disp=[...getDocs().filter(d=>{const dp=getDisp(d.id,distDate);return dp&&dp.turnos&&!dp.turnos.includes('no')&&dp.turnos.length;})].sort(()=>Math.random()-.5);
-  salasCur.forEach((s,i)=>{
-    s.users=disp[i]?[{uid:disp[i].id,turno:'dia'}]:[];
-    s.user_id=disp[i]?disp[i].id:null;
+  let k=0;
+  salasCur.forEach(s=>{
+    if(s.cancelada) return; // las salas canceladas no se reasignan
+    const d=disp[k++];
+    s.users=d?[{uid:d.id,turno:'dia'}]:[];
+    s.user_id=d?d.id:null;
   });
   renderSalas();toast('Auto-asignacion aplicada. Guarda antes de continuar.','info');
 }
+// ══════════════════════════════════════════════════════════════
+//  CANCELACION DE SALAS PLANIFICADAS (v2.21.0)
+//  Una sala ya asignada se puede cancelar (motivo administrativo,
+//  calamidad del anestesiologo u otro). Se guarda dentro del mismo
+//  objeto de la sala en distribuciones.asignaciones (jsonb) — no
+//  requiere columnas nuevas. Los anestesiologos originales quedan en
+//  sala.cancelada.users y sala.users se vacia, asi todo lo que lee
+//  asignaciones (Calendario, Mi asignacion, texto del programa,
+//  verificacion PDF, Excel) deja de contarla como asignacion activa.
+//  Reactivar devuelve los mismos anestesiologos a la sala.
+// ══════════════════════════════════════════════════════════════
+const SALA_CANC_CAT={administrativo:'Motivo administrativo',calamidad:'Calamidad del anestesiologo',otro:'Otro motivo'};
+function escHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+// Quien ve el nombre del anestesiologo con calamidad y las observaciones:
+// el administrador y el propio afectado. El resto ve solo la categoria.
+function salaCancPuedeVerNombres(c){
+  if(!c) return false;
+  if(APP.isAdmin) return true;
+  const miId=APP.user?.id;
+  return !!miId && (c.anest_uid===miId || (c.users||[]).some(u=>u.uid===miId));
+}
+function salaCancMotivoTxt(c,verNombres){
+  if(!c) return '';
+  let t=SALA_CANC_CAT[c.categoria]||'Cancelada';
+  if(c.categoria==='calamidad' && verNombres && c.anest_nombre) t+=' — '+escHtml(c.anest_nombre);
+  return t;
+}
+function abrirCancelarSala(idx){
+  if(!APP.canEdit){toast('Solo el administrador puede cancelar salas','info');return;}
+  const sala=salasCur[idx];if(!sala||sala.cancelada)return;
+  document.getElementById('sc-titulo').textContent='Cancelar '+salaLabel(sala);
+  document.getElementById('sc-idx').value=idx;
+  const users=sala.users||[];
+  const as=document.getElementById('sc-asignados');
+  if(as) as.innerHTML=users.length
+    ? users.map(u=>`<div>• ${escHtml(nombreCorto(getP(u.uid),u))} <span style="font-family:var(--mono);font-size:9px;color:#4e6c8a;">(${u.turno||'dia'})</span></div>`).join('')
+    : '<span style="color:#9ab0c8;">Sin anestesiologos asignados</span>';
+  const sa=document.getElementById('sc-anest');
+  if(sa) sa.innerHTML=users.length
+    ? users.map(u=>`<option value="${u.uid}">${escHtml(nombreCorto(getP(u.uid),u))}</option>`).join('')
+    : '<option value="">— Sin anestesiologos en esta sala —</option>';
+  document.getElementById('sc-cat').value='administrativo';
+  document.getElementById('sc-detalle').value='';
+  document.getElementById('sc-obs').value='';
+  customizarSelect('sc-cat');
+  customizarSelect('sc-anest');
+  scCatChanged();
+  openModal('modal-cancelar-sala');
+}
+function scCatChanged(){
+  const cat=document.getElementById('sc-cat')?.value;
+  const row=document.getElementById('sc-anest-row');
+  if(row) row.style.display=cat==='calamidad'?'':'none';
+  const lbl=document.getElementById('sc-detalle-lbl');
+  const inp=document.getElementById('sc-detalle');
+  if(lbl) lbl.textContent=cat==='otro'?'Detalle (obligatorio)':'Detalle (opcional)';
+  if(inp) inp.placeholder=cat==='calamidad'?'Ej: Calamidad domestica':cat==='otro'?'Describe el motivo':'Ej: Disminucion de programacion por festivo';
+}
+async function confirmarCancelarSala(){
+  const idx=parseInt(document.getElementById('sc-idx').value);
+  const sala=salasCur[idx];if(!sala)return;
+  const cat=document.getElementById('sc-cat').value;
+  const detalle=(document.getElementById('sc-detalle').value||'').trim();
+  const obs=(document.getElementById('sc-obs').value||'').trim();
+  if(cat==='otro'&&!detalle){toast('Describe el motivo de la cancelacion','error');return;}
+  let anestUid=null,anestNombre=null;
+  if(cat==='calamidad'){
+    anestUid=document.getElementById('sc-anest').value||null;
+    if(!anestUid){toast('Elige el anestesiologo con la calamidad','error');return;}
+    const u=(sala.users||[]).find(x=>x.uid===anestUid);
+    anestNombre=nombreCorto(getP(anestUid),u);
+  }
+  const yo=APP.perfil||getP(APP.user?.id);
+  sala.cancelada={
+    categoria:cat,
+    detalle:detalle||null,
+    obs:obs||null,
+    anest_uid:anestUid,
+    anest_nombre:anestNombre,
+    users:[...(sala.users||[])],
+    por:APP.user?.id||null,
+    por_nombre:yo?((yo.nombre||'')+' '+(yo.apellidos||'')).trim():null,
+    en:new Date().toISOString()
+  };
+  sala.users=[];sala.user_id=null;
+  closeModal('modal-cancelar-sala');
+  renderSalas();
+  await guardarDist();
+}
+async function reactivarSala(idx){
+  if(!APP.canEdit){toast('Solo el administrador puede reactivar salas','info');return;}
+  const sala=salasCur[idx];if(!sala||!sala.cancelada)return;
+  const orig=sala.cancelada.users||[];
+  const nombres=orig.map(u=>nombreCorto(getP(u.uid),u)).join(', ');
+  if(!confirm(`Reactivar ${salaLabel(sala)}?`+(nombres?`\n\nVuelve con: ${nombres}`:'')))return;
+  sala.users=[...orig];
+  sala.user_id=orig.length?orig[0].uid:null;
+  sala.turno=orig.length?(orig[0].turno||'dia'):'dia';
+  delete sala.cancelada;
+  renderSalas();
+  await guardarDist();
+}
+
 // ── GENERADOR DE TEXTO DE PROGRAMACIÓN ─────────────────────
 function turnoLabel(turno){
   const M={dia:'12 horas',noche:'Turno nocturno',guardia:'24 horas',h6m:'6 horas AM',h6t:'6 horas PM'};
@@ -5157,7 +5413,7 @@ function generarTextoProg(){
       const target=sala.tipo==='sala'?salas:sala.tipo==='consultorio'?consultorios:sala.tipo==='interconsulta'?intercons:sala.tipo==='oncologia'?oncologias:sala.tipo==='sedacion'?sedaciones:urgencias;
       // En fin de semana, las salas de cirugía sin asignación no están activas
       // (no es que falte staff: ese día ese quirófano no opera).
-      const nombreVacio=(sala.tipo==='sala'&&esFinDeSemana)?'No activa (fin de semana)':'Sin asignar';
+      const nombreVacio=sala.cancelada?'SALA CANCELADA':(sala.tipo==='sala'&&esFinDeSemana)?'No activa (fin de semana)':'Sin asignar';
       target.push({etiqueta:etiq,turno:'',nombre:nombreVacio});
     }
   });
@@ -5362,6 +5618,13 @@ function renderVerifPdf(secciones){
     const sala=salasCur.find(s=>s.tipo==='sala'&&s.num===n);
     const texto=normTxt((secciones['SALA_'+n]||[]).join(' \n '));
     const users=(sala&&sala.users)||[];
+    if(!users.length&&sala&&sala.cancelada){
+      const tieneContenidoPdf=texto.replace(/[^A-Z]/g,'').length>3;
+      filas.push({sala:'SALA '+n,turno:'—',ans:'Cancelada',
+        estado:tieneContenidoPdf?'warn':'ok',
+        detalle:tieneContenidoPdf?'La sala esta CANCELADA en AgendaANS pero el PDF muestra actividad — revisar.':'Sala cancelada en AgendaANS; el PDF tampoco muestra actividad.'});
+      return;
+    }
     if(!users.length){
       const tieneContenidoPdf=texto.replace(/[^A-Z]/g,'').length>3;
       filas.push({sala:'SALA '+n,turno:'—',ans:'Sin asignar',
@@ -6701,7 +6964,116 @@ function cancFiltradas(soloPersonal){
     }
   }
   if(tipo!=='all') rows=rows.filter(r=>r.tipo_registro===tipo);
+  const pacTerm=cancPacienteTerm();
+  if(pacTerm) rows=rows.filter(r=>cancPacienteCoincide(r,pacTerm));
   return cancDedupRows(rows);
+}
+// ── Filtro por paciente (nombre o documento) — v2.21.0 ──
+function cancNorm(s){return String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();}
+function cancDocNorm(s){return String(s==null?'':s).toLowerCase().replace(/[^a-z0-9]/g,'');}
+function cancPacienteTerm(){return cancNorm(document.getElementById('canc-f-paciente')?.value||'');}
+function cancPacienteCoincide(r,term){
+  // Nombre: todas las palabras escritas deben aparecer (en cualquier orden)
+  const nombre=cancNorm(r.nombre_paciente);
+  const palabras=term.split(' ').filter(Boolean);
+  if(palabras.length&&palabras.every(p=>nombre.includes(p))) return true;
+  // Documento: ignora puntos, guiones, espacios y prefijos (CC, TI, RC...)
+  const td=cancDocNorm(term);
+  if(td.length>=3){
+    const doc=cancDocNorm(r.identificador_paciente);
+    if(doc.includes(td)) return true;
+    const soloNum=td.replace(/[^0-9]/g,'');
+    if(soloNum.length>=3&&doc.replace(/[^0-9]/g,'').includes(soloNum)) return true;
+  }
+  return false;
+}
+let _cancPacTimer=null;
+function cancPacienteInput(){
+  const v=document.getElementById('canc-f-paciente')?.value||'';
+  const clr=document.getElementById('canc-f-paciente-clear');if(clr)clr.style.display=v?'inline-block':'none';
+  const w=document.getElementById('canc-f-paciente-wrap');if(w)w.classList.toggle('activo',!!v.trim());
+  clearTimeout(_cancPacTimer);
+  _cancPacTimer=setTimeout(renderCancStats,250);
+}
+function cancPacienteLimpiar(){
+  const i=document.getElementById('canc-f-paciente');if(i)i.value='';
+  cancPacienteInput();
+}
+function renderCancPacienteResultados(rows){
+  const box=document.getElementById('canc-paciente-box');if(!box)return;
+  const raw=(document.getElementById('canc-f-paciente')?.value||'').trim();
+  if(!raw){box.style.display='none';return;}
+  box.style.display='';
+  const t=document.getElementById('canc-paciente-titulo');
+  const pacs=new Set(rows.map(r=>cancDocNorm(r.identificador_paciente)||cancNorm(r.nombre_paciente)));
+  if(t) t.textContent=`Casos que coinciden con "${raw}" — ${rows.length} cancelacion${rows.length===1?'':'es'} · ${pacs.size} paciente${pacs.size===1?'':'s'}`;
+  const cont=document.getElementById('canc-paciente-resultados');if(!cont)return;
+  if(!rows.length){
+    cont.innerHTML='<div class="empty-title" style="font-size:12px;">Ningun paciente coincide en el periodo seleccionado. Prueba ampliando el periodo a "Todo".</div>';
+    return;
+  }
+  const ord=[...rows].sort((a,b)=>(b.fecha_programada||'').localeCompare(a.fecha_programada||''));
+  const max=100;
+  cont.innerHTML=`<div style="overflow-x:auto;"><table class="tt" style="min-width:0;width:100%;">
+    <thead><tr><th style="text-align:left;padding-left:8px;">Paciente</th><th>Documento</th><th>Fecha</th><th>Especialidad</th><th>Anestesiologo</th><th style="text-align:left;">Motivo</th></tr></thead>
+    <tbody>${ord.slice(0,max).map(r=>`<tr class="canc-pac-row" onclick="abrirCancDetalle('${r.id}')" title="Ver detalle del caso">
+      <td style="text-align:left;padding-left:8px;font-weight:600;">${escHtml(r.nombre_paciente||'—')}</td>
+      <td style="font-family:var(--mono);font-size:10px;">${escHtml(r.identificador_paciente||'—')}</td>
+      <td style="font-family:var(--mono);font-size:10px;">${r.fecha_programada||''}</td>
+      <td>${escHtml(r.especialidad_quirurgica||'')}</td>
+      <td>${escHtml(cancNombreAnest(r)||'Sin asignar')}</td>
+      <td style="text-align:left;">${escHtml(r.motivo||'')}</td></tr>`).join('')}</tbody></table></div>`+
+    (ord.length>max?`<div style="font-family:var(--mono);font-size:9px;color:#8aa8c0;margin-top:4px;">Mostrando ${max} de ${ord.length} — afina la busqueda para ver el resto.</div>`:'');
+}
+// ── Salas canceladas de la programacion (panel en Estadisticas) ──
+function cancRangoActivo(){
+  const d=document.getElementById('canc-f-desde')?.value||'';
+  const h=document.getElementById('canc-f-hasta')?.value||'';
+  if(d||h) return {desde:d||null,hasta:h||null};
+  return cancRangoStats(document.getElementById('canc-f-periodo')?.value||'6');
+}
+let _salasCancToken=0;
+async function renderSalasCanceladasPanel(){
+  const cont=document.getElementById('canc-salas-canceladas');if(!cont)return;
+  const token=++_salasCancToken;
+  const rango=cancRangoActivo();
+  let q=db.from('distribuciones').select('fecha,asignaciones');
+  if(rango&&rango.desde) q=q.gte('fecha',rango.desde);
+  if(rango&&rango.hasta) q=q.lte('fecha',rango.hasta);
+  let data=null,error=null;
+  try{ ({data,error}=await q); }catch(e){ error=e; }
+  if(token!==_salasCancToken) return; // llego una respuesta vieja: la ignora
+  if(error){cont.innerHTML='<div class="empty-title" style="font-size:12px;">No se pudieron cargar las salas canceladas.</div>';return;}
+  const anestId=document.getElementById('canc-f-anest')?.value||'';
+  const filas=[];
+  (data||[]).forEach(d=>{
+    (d.asignaciones||[]).forEach(s=>{
+      if(!s||!s.cancelada) return;
+      const c=s.cancelada;
+      if(anestId && c.anest_uid!==anestId && !(c.users||[]).some(u=>u.uid===anestId)) return;
+      filas.push({fecha:String(d.fecha).slice(0,10),sala:s,c});
+    });
+  });
+  filas.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  if(!filas.length){cont.innerHTML='<div class="empty-title" style="font-size:12px;">Sin salas canceladas en este periodo</div>';return;}
+  const porCat={};
+  filas.forEach(f=>{const k=f.c.categoria||'otro';porCat[k]=(porCat[k]||0)+1;});
+  const COL={administrativo:'#1a5cbf',calamidad:'#c0392b',otro:'#8a5a00'};
+  const chips=Object.entries(porCat).sort((a,b)=>b[1]-a[1]).map(([k,n])=>
+    `<span class="badge" style="background:#fff;border:1px solid ${COL[k]||'#8aa8c0'};color:${COL[k]||'#4e6c8a'};">${SALA_CANC_CAT[k]||k}: ${n}</span>`).join(' ');
+  cont.innerHTML=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"><span class="badge" style="background:#fbeaea;color:#8b1a1a;">Total: ${filas.length}</span> ${chips}</div>
+    <div style="overflow-x:auto;"><table class="tt" style="min-width:0;width:100%;">
+    <thead><tr><th>Fecha</th><th style="text-align:left;">Sala</th><th style="text-align:left;">Motivo</th><th style="text-align:left;">Detalle</th><th style="text-align:left;">Anestesiologos de la sala</th><th>Cancelada por</th></tr></thead>
+    <tbody>${filas.map(f=>{
+      const ver=salaCancPuedeVerNombres(f.c);
+      const anes=(f.c.users||[]).map(u=>nombreCorto(getP(u.uid),u)).join(', ');
+      return `<tr><td style="font-family:var(--mono);font-size:10px;">${f.fecha}</td>
+        <td style="text-align:left;">${salaLabel(f.sala)}</td>
+        <td style="text-align:left;color:${COL[f.c.categoria]||'#4e6c8a'};font-weight:600;">${salaCancMotivoTxt(f.c,ver)}</td>
+        <td style="text-align:left;">${escHtml(f.c.detalle||'')}</td>
+        <td style="text-align:left;">${escHtml(anes||'—')}</td>
+        <td style="font-family:var(--mono);font-size:9px;">${escHtml(f.c.por_nombre||'')}${f.c.en?'<br>'+fechaHoraBogota(f.c.en):''}</td></tr>`;
+    }).join('')}</tbody></table></div>`;
 }
 // Rango de fechas elegido a mano en Estadisticas: al elegir Desde/Hasta, el
 // selector de periodo queda deshabilitado (no tiene sentido combinarlos).
@@ -6724,12 +7096,14 @@ function cancRangoLimpiar(){
 // (rango elegido a mano, o el periodo del selector) — se usa en el KPI y en
 // las exportaciones a Excel/PDF.
 function cancPeriodoLabel(){
+  const pac=(document.getElementById('canc-f-paciente')?.value||'').trim();
+  const suf=pac?` · paciente "${pac}"`:'';
   const desde=document.getElementById('canc-f-desde')?.value||'';
   const hasta=document.getElementById('canc-f-hasta')?.value||'';
-  if(desde&&hasta) return `Del ${desde} al ${hasta}`;
-  if(desde) return `Desde ${desde}`;
-  if(hasta) return `Hasta ${hasta}`;
-  return document.getElementById('canc-f-periodo')?.selectedOptions?.[0]?.text||'Periodo seleccionado';
+  if(desde&&hasta) return `Del ${desde} al ${hasta}`+suf;
+  if(desde) return `Desde ${desde}`+suf;
+  if(hasta) return `Hasta ${hasta}`+suf;
+  return (document.getElementById('canc-f-periodo')?.selectedOptions?.[0]?.text||'Periodo seleccionado')+suf;
 }
 // Semana ISO: agrupa fecha_programada por semana (lunes a domingo) para tendencia semanal.
 function isoWeekInfo(iso){
@@ -6756,6 +7130,8 @@ function renderCancStats(){
     contAnest.style.display='';
   }
   const rows=cancFiltradas(false);
+  renderCancPacienteResultados(rows);
+  renderSalasCanceladasPanel();
   const kpi=document.getElementById('canc-stats-kpi');if(!kpi)return;
   const total=rows.length;
   const ajenas=rows.filter(r=>r.categoria==='ajena_anestesiologia').length;
