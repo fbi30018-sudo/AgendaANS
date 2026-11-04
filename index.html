@@ -1898,6 +1898,17 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
     <div class="field" id="sc-comp-det-row" style="display:none;"><label>Detalle de la compensacion (opcional)</label>
       <input type="text" id="sc-comp-det" placeholder="Ej: Consultorio 3 de 13:00 a 19:00" maxlength="160">
     </div>
+    <div class="field" id="sc-cobrar-row" style="background:#f0faf5;border:1px solid #a0d8c0;border-radius:4px;padding:8px 10px;">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:12px;color:#0a5a3a;font-weight:600;"><input type="checkbox" id="sc-cobrar" onchange="scCobrarChanged()" style="width:auto;"> Cobrar estas horas a los anestesiólogos de la sala</label>
+      <div id="sc-cobrar-opts" style="display:none;margin-top:6px;">
+        <select id="sc-cobrar-mot" style="width:100%;margin-bottom:5px;">
+          <option value="menos24">Cancelada con menos de 24 h de anticipación, sin reposición</option>
+          <option value="otro">Otro motivo</option>
+        </select>
+        <input type="text" id="sc-cobrar-det" placeholder="Detalle del cobro (opcional)" maxlength="160">
+        <div style="font-family:var(--mono);font-size:9px;color:#0a6a40;margin-top:4px;">Las horas canceladas se suman a la agenda de cada anestesiólogo de la sala (día con chip verde "CANC cobrada"). Se puede ajustar por anestesiólogo desde su calendario.</div>
+      </div>
+    </div>
     <div class="field"><label>Observaciones (opcional)</label>
       <input type="text" id="sc-obs" placeholder="Notas internas..." maxlength="240">
     </div>
@@ -2118,7 +2129,10 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
-  {v:'2.27.0',n:'Ajuste de horas de salas canceladas desde el calendario',f:'2026-11-04',cambios:[
+  {v:'2.27.0',n:'Cobro y ajuste de horas de salas canceladas',f:'2026-11-04',cambios:[
+    'Nuevo: al cancelar una sala sin compensación se puede marcar "Cobrar estas horas a los anestesiólogos de la sala" con el motivo (por defecto: cancelada con menos de 24 h de anticipación, sin reposición).',
+    'En la tarjeta de la sala cancelada (y en la franja de media jornada) el administrador tiene el botón "💲 Cobrar horas" para activarlo o quitarlo después.',
+    'Las horas cobradas se suman a cada anestesiólogo de la sala: el día muestra el chip verde "CANC cobrada +12h", la facturación muestra la línea de salas cobradas y, si la agenda de ese día no tenía turno, las horas se agregan igual (facturación, PDF, Excel y cuadro).',
     'Nuevo: en el editor del día de cada anestesiólogo aparece la sección "Asignación de salas ese día": sala, turno asignado, si está activa o cancelada (completa o media jornada), el motivo y la compensación registrada en la distribución.',
     'Doble verificación: avisa si el anestesiólogo está en una sala pero su agenda no tiene turno, si el turno de la agenda no coincide con el asignado, o si tiene turno pero no aparece en la distribución.',
     'Solo el administrador: para cada sala cancelada se elige cómo se cuentan las horas para ese anestesiólogo — Descontar (con las horas editables), Sumar las horas (no descontar) o Compensada en otro servicio (con el servicio y el detalle).',
@@ -3190,6 +3204,7 @@ function renderCuadro(){
         const cdC=cancDia(doc.id,iso);
         let ttl=dp&&dp.observaciones?dp.observaciones:'';
         if(cdC.items.length) ttl=(ttl?ttl+'\n':'')+cancDiaTitle(cdC);
+        if(cobroSinTurno(cdC,dp)&&!lbl.includes('tk mt')){lbl+=`<span class="tk" style="background:#0a7a4a;color:#fff;font-size:6px;display:block;line-height:1.3;">$${cdC.sumadas}</span>`;diasT++;}
         if(cdC.perdidas>0){bg2='background:#fde2e2;box-shadow:inset 0 0 0 1px #c0392b;';lbl+=`<span class="tk" style="background:#c0392b;color:#fff;font-size:6px;display:block;line-height:1.3;">C−${cdC.perdidas}</span>`;}
         r+=`<td style="${bg2}"${ttl?` title="${escObs(ttl)}"`:''}>${lbl}</td>`;
       });
@@ -3388,7 +3403,7 @@ function mdmRenderGrid(){
     // Sala cancelada que afecta a este anestesiologo
     const cdM=cancDia(uid,iso);
     if(cdM.perdidas>0){bg='background:#fde2e2;border-color:#c0392b;border-width:2px;';dots+=chipCancCal(cdM);}
-    else if(cdM.compensadas>0){dots+=chipCancCal(cdM);}
+    else if(cdM.compensadas>0||cdM.sumadas>0){if(cdM.sumadas>0&&!bg)bg='background:#e6f5ee;border-color:#0a7a4a;border-width:2px;';dots+=chipCancCal(cdM);}
     // Declarar puedeEditar ANTES de usarlo
     const tri2=triDeM(_mdmMes,anio);
     const puedeEditar=APP.isAdmin||(tri2&&triActivo(tri2));
@@ -3474,7 +3489,7 @@ function medRenderAsig(uid,iso){
       const mot=(typeof salaCancMotivoTxt==='function'?salaCancMotivoTxt(it.c,true):'')+(it.c.detalle?' · '+esc(it.c.detalle):'');
       const compD=(typeof salaCancCompTxt==='function'?salaCancCompTxt(it.c):'');
       h+=`<div style="font-size:11px;color:#4e6c8a;margin-top:2px;">Motivo: ${mot||'—'}</div>`;
-      h+=`<div style="font-size:11px;color:#4e6c8a;">En la distribución: ${compD?esc(compD):'Sin compensación'}</div>`;
+      h+=`<div style="font-size:11px;color:#4e6c8a;">En la distribución: ${compD?esc(compD):'Sin compensación'}${it.c.cobrar?` · <b style="color:#0a6a40;">💲 horas cobradas</b> (${esc(cobroMotivoTxt(it.c.cobrar))})`:''}</div>`;
     }
     // Doble verificacion agenda vs asignacion
     if(!turnosAg.length) h+=`<div style="font-size:11px;color:#b45309;margin-top:3px;">⚠ Asignado en sala pero la agenda de este día no tiene turno: no suma horas.</div>`;
@@ -3484,7 +3499,7 @@ function medRenderAsig(uid,iso){
       const e=salaHorasEfectivas(it.c,it.u);
       if(e.cancel){
         const aj=it.u.canc_ajuste||{};
-        const defModo=e.compensa?'compensada':'descontar';
+        const defModo=e.compensa?'compensada':(it.c.cobrar?'sumar':'descontar');
         const modo=aj.modo||defModo;
         const hDesc=aj.modo==='descontar'?(aj.horas??e.cancel):e.cancel;
         const comp=aj.comp||(it.c.comp&&it.c.comp!=='ninguna'?it.c.comp:'consulta');
@@ -3497,7 +3512,8 @@ function medRenderAsig(uid,iso){
             <div style="font-size:11px;font-weight:600;color:#0d1f35;margin-bottom:4px;">Horas canceladas (${e.cancel} h) — ¿cómo se cuentan para este anestesiólogo?</div>
             <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#0d1f35;margin:2px 0;cursor:pointer;"><input type="radio" name="medcanc-${n}" value="descontar"${modo==='descontar'?' checked':''} onchange="medCancUI(${n})"> Descontar
               <input type="number" id="medcanc-h-${n}" min="0" max="24" value="${hDesc}" style="width:52px;padding:2px 5px;border:1px solid #c8d4e0;border-radius:3px;font-size:11px;background:#fff;color:#0d1f35;" oninput="medCancUI(${n})"> h (sin reposición)</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#0d1f35;margin:2px 0;cursor:pointer;"><input type="radio" name="medcanc-${n}" value="sumar"${modo==='sumar'?' checked':''} onchange="medCancUI(${n})"> Sumar las horas (no descontar)</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#0d1f35;margin:2px 0;cursor:pointer;"><input type="radio" name="medcanc-${n}" value="sumar"${modo==='sumar'?' checked':''} onchange="medCancUI(${n})"> Cobrar / sumar las horas (sin reposición)</label>
+            <div id="medcanc-cob-${n}" style="display:${modo==='sumar'?'block':'none'};margin:3px 0 0 20px;"><input type="text" id="medcanc-m-${n}" value="${esc(aj.modo==='sumar'?(aj.motivo||''):(it.c.cobrar?cobroMotivoTxt(it.c.cobrar):''))}" placeholder="Motivo: p.ej. cancelada con menos de 24 h, sin reposición" style="width:100%;padding:3px 6px;border:1px solid #c8d4e0;border-radius:3px;font-size:11px;background:#fff;color:#0d1f35;"></div>
             <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#0d1f35;margin:2px 0;cursor:pointer;"><input type="radio" name="medcanc-${n}" value="compensada"${modo==='compensada'?' checked':''} onchange="medCancUI(${n})"> Compensada en otro servicio</label>
             <div id="medcanc-comp-${n}" style="display:${modo==='compensada'?'flex':'none'};gap:6px;margin:3px 0 0 20px;flex-wrap:wrap;">
               <select id="medcanc-c-${n}" style="padding:3px 6px;border:1px solid #c8d4e0;border-radius:3px;font-size:11px;background:#fff;color:#0d1f35;">${opt}</select>
@@ -3517,10 +3533,11 @@ function medRenderAsig(uid,iso){
 function medCancUI(n){
   const m=document.querySelector(`input[name="medcanc-${n}"]:checked`)?.value||'descontar';
   const box=document.getElementById('medcanc-comp-'+n);if(box)box.style.display=m==='compensada'?'flex':'none';
+  const cob=document.getElementById('medcanc-cob-'+n);if(cob)cob.style.display=m==='sumar'?'block':'none';
   const ef=document.getElementById('medcanc-ef-'+n);if(!ef)return;
   const hD=parseInt(document.getElementById('medcanc-h-'+n)?.value)||0;
   ef.innerHTML=m==='descontar'?`<span style="color:#c0392b;">Efecto: −${hD} h en el total del anestesiólogo (día en rojo)</span>`
-    :m==='sumar'?`<span style="color:#0a6a40;">Efecto: las horas del turno se suman completas</span>`
+    :m==='sumar'?`<span style="color:#0a6a40;">Efecto: se cobran las horas de la sala cancelada (chip verde "CANC cobrada")</span>`
     :`<span style="color:#b45309;">Efecto: horas conservadas por compensación</span>`;
 }
 async function medGuardarAjustesCanc(uid,iso){
@@ -3529,6 +3546,7 @@ async function medGuardarAjustesCanc(uid,iso){
     const modo=document.querySelector(`input[name="medcanc-${n}"]:checked`)?.value||'descontar';
     const aj={modo};
     if(modo==='descontar') aj.horas=Math.max(0,Math.min(24,parseInt(document.getElementById('medcanc-h-'+n)?.value)||0));
+    if(modo==='sumar'){const mt=(document.getElementById('medcanc-m-'+n)?.value||'').trim();if(mt)aj.motivo=mt;}
     if(modo==='compensada'){aj.comp=document.getElementById('medcanc-c-'+n)?.value||'otra';aj.comp_det=(document.getElementById('medcanc-d-'+n)?.value||'').trim();}
     return {c,aj};
   });
@@ -3542,8 +3560,12 @@ async function medGuardarAjustesCanc(uid,iso){
     const s=salas.find(x=>x.id&&x.id===c.sid)||salas[c.idx];if(!s)return;
     const u=c.tipo==='completa'?(s.cancelada?.users||[]).find(x=>x.uid===uid):(s.users||[]).find(x=>x.uid===uid);
     if(!u)return;
-    const prev=u.canc_ajuste?JSON.stringify({modo:u.canc_ajuste.modo,horas:u.canc_ajuste.horas,comp:u.canc_ajuste.comp,comp_det:u.canc_ajuste.comp_det}):'';
-    const nxt=JSON.stringify({modo:aj.modo,horas:aj.horas,comp:aj.comp,comp_det:aj.comp_det});
+    const prev=u.canc_ajuste?JSON.stringify({modo:u.canc_ajuste.modo,horas:u.canc_ajuste.horas,comp:u.canc_ajuste.comp,comp_det:u.canc_ajuste.comp_det,motivo:u.canc_ajuste.motivo}):'';
+    const nxt=JSON.stringify({modo:aj.modo,horas:aj.horas,comp:aj.comp,comp_det:aj.comp_det,motivo:aj.motivo});
+    // Si coincide con lo que ya define la sala y no habia ajuste, no se guarda nada
+    const cS=c.tipo==='completa'?s.cancelada:s.canc_parcial;
+    const defM=cS&&cS.comp&&cS.comp!=='ninguna'?'compensada':(cS&&cS.cobrar?'sumar':'descontar');
+    if(!u.canc_ajuste&&aj.modo===defM&&(aj.modo!=='descontar'||aj.horas===c.horas)&&!aj.motivo&&aj.modo!=='compensada') return;
     if(prev===nxt) return;
     u.canc_ajuste={...aj,por:APP.user.id,fecha:new Date().toISOString()};
     cambios++;
@@ -3704,6 +3726,7 @@ function cancDia(uid,iso){
       if(!e.cancel) return;
       const aj=u.canc_ajuste;
       let modo=e.compensa?'compensada':'descontar', hDesc=e.compensa?0:e.cancel;
+      if(c.cobrar&&!e.compensa){modo='sumar';hDesc=0;}
       if(aj&&aj.modo){
         modo=aj.modo;
         hDesc=modo==='descontar'?Math.max(0,Math.min(24,aj.horas??e.cancel)):0;
@@ -3711,20 +3734,27 @@ function cancDia(uid,iso){
       if(modo==='descontar') r.perdidas+=hDesc;
       else if(modo==='compensada') r.compensadas+=e.cancel;
       else r.sumadas=(r.sumadas||0)+e.cancel;
-      r.items.push({sala:(typeof salaLabel==='function'?salaLabel(s):'Sala'),alcance:parcial?(c.alcance==='am'?'Media jornada AM':'Media jornada PM'):'Jornada completa',horas:e.cancel,hDesc,modo,ajustado:!!(aj&&aj.modo),compensa:modo==='compensada',motivo:(c.motivo||c.detalle||''),comp:(aj&&aj.modo==='compensada')?(SALA_CANC_COMP[aj.comp]||aj.comp||'')+(aj.comp_det?' — '+aj.comp_det:''):(typeof salaCancCompTxt==='function'?salaCancCompTxt(c):'')});
+      r.items.push({sala:(typeof salaLabel==='function'?salaLabel(s):'Sala'),alcance:parcial?(c.alcance==='am'?'Media jornada AM':'Media jornada PM'):'Jornada completa',horas:e.cancel,hDesc,modo,ajustado:!!(aj&&aj.modo),cobro:(modo==='sumar')?((aj&&aj.modo==='sumar'&&aj.motivo)?aj.motivo:(c.cobrar?cobroMotivoTxt(c.cobrar):'')):'',compensa:modo==='compensada',motivo:(c.motivo||c.detalle||''),comp:(aj&&aj.modo==='compensada')?(SALA_CANC_COMP[aj.comp]||aj.comp||'')+(aj.comp_det?' — '+aj.comp_det:''):(typeof salaCancCompTxt==='function'?salaCancCompTxt(c):'')});
     };
     if(s.cancelada){const u=(s.cancelada.users||[]).find(x=>x.uid===uid);if(u)add(s.cancelada,u,false);}
     if(s.canc_parcial){const u=(s.users||[]).find(x=>x.uid===uid);if(u)add(s.canc_parcial,u,true);}
   });
   return r;
 }
+const COBRO_MOT={menos24:'Cancelada con menos de 24 h de anticipación, sin reposición',otro:'Otro motivo'};
+function cobroMotivoTxt(cb){if(!cb)return '';return (COBRO_MOT[cb.motivo]||cb.motivo||'Cobro de horas')+(cb.det?' — '+cb.det:'');}
+// Dia que cuenta para horas: turnos/extras en agenda o sala cancelada cuyas horas se cobran
+function diaCuenta(uid,iso,dp){return dpCuentaHoras(dp)||cancDia(uid,iso).sumadas>0;}
+const TURNOS_DIURNOS=['dia','guardia','h6m','h6t','cx','cxam','cxpm'];
+// Horas cobradas de una sala cancelada que NO estan ya en la agenda (sin turno diurno ese dia)
+function cobroSinTurno(cd,dp){return (cd.sumadas>0&&!((dp&&dp.turnos)||[]).some(t=>TURNOS_DIURNOS.includes(t)))?cd.sumadas:0;}
 function cancDiaTitle(cd){
-  return cd.items.map(i=>`${i.sala} cancelada (${i.alcance}, ${i.horas} h) — ${i.modo==='descontar'?'SIN reposicion: se descuentan '+i.hDesc+' h':i.modo==='sumar'?'horas sumadas por el administrador':'con reposicion'}${i.comp?' · '+i.comp:''}${i.motivo?' · '+i.motivo:''}${i.ajustado?' (ajuste manual)':''}`).join('\n');
+  return cd.items.map(i=>`${i.sala} cancelada (${i.alcance}, ${i.horas} h) — ${i.modo==='descontar'?'SIN reposicion: se descuentan '+i.hDesc+' h':i.modo==='sumar'?'HORAS COBRADAS'+(i.cobro?' ('+i.cobro+')':''):'con reposicion'}${i.comp?' · '+i.comp:''}${i.motivo?' · '+i.motivo:''}${i.ajustado?' (ajuste manual)':''}`).join('\n');
 }
 function chipCancCal(cd){
   if(cd.perdidas>0) return `<div style="display:flex;justify-content:center;margin-top:1px;"><span style="background:#c0392b;color:#fff;font-size:7px;font-weight:700;padding:1px 3px;border-radius:2px;">CANC −${cd.perdidas}h</span></div>`;
   if(cd.compensadas>0) return `<div style="display:flex;justify-content:center;margin-top:1px;"><span style="background:#d97706;color:#fff;font-size:7px;font-weight:700;padding:1px 3px;border-radius:2px;">CANC repuesta</span></div>`;
-  if(cd.sumadas>0) return `<div style="display:flex;justify-content:center;margin-top:1px;"><span style="background:#64748b;color:#fff;font-size:7px;font-weight:700;padding:1px 3px;border-radius:2px;">CANC sumada</span></div>`;
+  if(cd.sumadas>0) return `<div style="display:flex;justify-content:center;margin-top:1px;"><span style="background:#0a7a4a;color:#fff;font-size:7px;font-weight:700;padding:1px 3px;border-radius:2px;">CANC cobrada +${cd.sumadas}h</span></div>`;
   return '';
 }
 function dpTieneExtras(dp){return !!(dp&&dp.extras&&dp.extras.some(ex=>(ex.horas||0)>0));}
@@ -3789,7 +3819,7 @@ function renderDispMesGrid(y,m,editable){
     }else if(dp&&dp.turnos&&dp.turnos.includes('no')){bg='background:#fdf0f0;border-color:#e8b0b0;';dots+=`<div class="dot nd">No</div>`;}
     const cdD=cancDia(uid,iso);
     if(cdD.perdidas>0){bg='background:#fde2e2;border-color:#c0392b;border-width:2px;';dots+=chipCancCal(cdD);}
-    else if(cdD.compensadas>0){dots+=chipCancCal(cdD);}
+    else if(cdD.compensadas>0||cdD.sumadas>0){if(cdD.sumadas>0&&!bg)bg='background:#e6f5ee;border-color:#0a7a4a;border-width:2px;';dots+=chipCancCal(cdD);}
     // Dias ya pasados: solo el administrador puede editarlos (jornada cumplida)
     const esPasado=iso<hoy;
     const editableDia=editable&&(APP.canEdit||!esPasado);
@@ -3831,8 +3861,9 @@ function exportarExcel(){
       for(let d=1;d<=nDias;d++){
         const dt=new Date(anio,m,d);
         const iso=toISO(dt);
-        const dp=getDisp(doc.id,iso);
-        if(!dpCuentaHoras(dp)) continue;
+        let dp=getDisp(doc.id,iso);
+        if(!diaCuenta(doc.id,iso,dp)) continue;
+        dp=dp||{turnos:[],extras:[]};
         const ts=dp.turnos||[];
         const esDomFest=esFest(iso)||dt.getDay()===0;
         const esSab=dt.getDay()===6;
@@ -3857,6 +3888,8 @@ function exportarExcel(){
           });
         }
         const cdR=cancDia(doc.id,iso);
+        const addR=cobroSinTurno(cdR,dp);
+        if(addR){hDia+=addR;pDia+=addR*(esDomFest?130000:120000);}
         if(cdR.perdidas>0&&ts.some(t=>t!=='no')){hDia-=cdR.perdidas;pDia-=cdR.perdidas*(esDomFest?130000:120000);}
         if(hDia>0){mesesH[m]+=hDia;totalDias++;totalH+=hDia;totalP+=pDia;}
       }
@@ -3893,8 +3926,9 @@ function exportarExcel(){
     const celdas=diasArr.map(d=>{
       const dt=new Date(anio,m,d);
       const iso=toISO(dt);
-      const dp=getDisp(doc.id,iso);
-      if(!dpCuentaHoras(dp)) return '';
+      let dp=getDisp(doc.id,iso);
+      if(!diaCuenta(doc.id,iso,dp)) return '';
+      dp=dp||{turnos:[],extras:[]};
       const ts=dp.turnos||[];
       const esDomFest=esFest(iso)||dt.getDay()===0;
       let hDia=0,pDia=0,lbl=[];
@@ -3913,6 +3947,7 @@ function exportarExcel(){
         });
       }
       const cdT=cancDia(doc.id,iso);
+      if(cdT.sumadas>0){const addT=cobroSinTurno(cdT,dp);if(addT){hDia+=addT;pDia+=addT*(esDomFest?130000:120000);}lbl.push('CANC cobrada '+cdT.sumadas+'h');}
       if(cdT.perdidas>0&&ts.some(t=>t!=='no')){hDia-=cdT.perdidas;pDia-=cdT.perdidas*(esDomFest?130000:120000);lbl.push('CANC-'+cdT.perdidas+'h');}
       if(hDia>0){totDias++;totH+=hDia;totP+=pDia;}
       return lbl.join('/');
@@ -4038,8 +4073,9 @@ function exportarExcel(){
     for(let d2=1;d2<=nDias;d2++){
       const dt=new Date(anio,m,d2);
       const iso=toISO(dt);
-      const dp=getDisp(doc.id,iso);
-      if(!dpCuentaHoras(dp)) continue;
+      let dp=getDisp(doc.id,iso);
+      if(!diaCuenta(doc.id,iso,dp)) continue;
+      dp=dp||{turnos:[],extras:[]};
       const esDomFest=esFest(iso)||dt.getDay()===0;
       let hDia=0;
       (dp.turnos||[]).forEach(t=>{
@@ -4061,6 +4097,8 @@ function exportarExcel(){
         });
       }
       const cdX=cancDia(doc.id,iso);
+      const addX=cobroSinTurno(cdX,dp);
+      if(addX){hDia+=addX;if(esDomFest){hFest+=addX;pTurnos+=addX*130000;}else{hDiu+=addX;pTurnos+=addX*120000;}}
       if(cdX.perdidas>0&&(dp.turnos||[]).some(t=>t!=='no')) hCanc+=cdX.perdidas;
       if(hDia>0) dias++;
     }
@@ -4101,8 +4139,9 @@ function calcFacturacion(uid, meses, anio=cuadroAnio){
     for(let d=1;d<=nDias;d++){
       const dt=new Date(anio,m,d);
       const iso=toISO(dt);
-      const dp=getDisp(uid,iso);
-      if(!dpCuentaHoras(dp)) continue;
+      let dp=getDisp(uid,iso);
+      if(!diaCuenta(uid,iso,dp)) continue;
+      dp=dp||{turnos:[],extras:[]};
       // festivo = festivo oficial O domingo (NO sábado)
       const esFestODom = esFest(iso)||dt.getDay()===0;
       (dp.turnos||[]).forEach(t=>{
@@ -4149,6 +4188,15 @@ function calcFacturacion(uid, meses, anio=cuadroAnio){
       });
       // ── Salas canceladas sin reposicion: se descuentan ───────
       const cdF=cancDia(uid,iso);
+      if(cdF.sumadas>0){
+        desglose.cobH=(desglose.cobH||0)+cdF.sumadas;
+        const add=cobroSinTurno(cdF,dp);
+        if(add){
+          const v=esFestODom?130000:120000;
+          totalHoras+=add; totalPesos+=add*v;
+          if(esFestODom) desglose.festDom+=add; else desglose.diurno+=add;
+        }
+      }
       if(cdF.perdidas>0&&(dp.turnos||[]).some(t=>t!=='no')){
         const v=esFestODom?130000:120000;
         totalHoras-=cdF.perdidas; totalPesos-=cdF.perdidas*v;
@@ -4201,6 +4249,7 @@ function renderFacturacion(uid, meses, containerId, anio=cuadroAnio){
         ${(desglose.extDiurno||0)+(desglose.extNocturno||0)>0?`<div style="font-size:11px;border-top:1px dashed #c8d4e0;padding-top:5px;margin-top:3px;font-style:italic;color:#555;">Extras registradas:</div>`:''}
         ${desglose.extDiurno>0?`<div style="font-size:11px;padding-left:10px;"><span style="color:#4e6c8a;">↳ Extra diurna (07-19h):</span> <b>${desglose.extDiurno}h</b> × $120.000/h = <b style="color:#0a6a40;">${fmt(desglose.extDiurno*120000)}</b></div>`:''}
         ${desglose.extNocturno>0?`<div style="font-size:11px;padding-left:10px;"><span style="color:#4e6c8a;">↳ Extra nocturna (≥19h):</span> <b>${desglose.extNocturno}h</b> × $130.000/h = <b style="color:#3030a0;">${fmt(desglose.extNocturno*130000)}</b></div>`:''}
+        ${desglose.cobH>0?`<div style="font-size:11px;border-top:1px dashed #c8d4e0;padding-top:5px;margin-top:3px;"><span style="color:#0a7a4a;font-weight:600;">Salas canceladas cobradas (sin reposición):</span> <b style="color:#0a7a4a;">${desglose.cobH}h</b> <span style="color:#8aa8c0;">incluidas en los turnos</span></div>`:''}
         ${desglose.cancH>0?`<div style="font-size:11px;border-top:1px dashed #c8d4e0;padding-top:5px;margin-top:3px;"><span style="color:#c0392b;font-weight:600;">Salas canceladas sin reposición:</span> <b style="color:#c0392b;">−${desglose.cancH}h</b> = <b style="color:#c0392b;">−${fmt(desglose.cancP)}</b></div>`:''}
       </div>
       <div style="border-top:2px solid #c8d4e0;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
@@ -4243,7 +4292,7 @@ function cuadroDocsConTurno(mes,anio=cuadroAnio){
     for(let d=1;d<=nDias;d++){
       const iso=toISO(new Date(anio,mes,d));
       const dp=getDisp(doc.id,iso);
-      if(dpCuentaHoras(dp)) return true;
+      if(diaCuenta(doc.id,iso,dp)) return true;
     }
     return false;
   });
@@ -4324,6 +4373,7 @@ function generarAgendaPdfDoc(doc,mes,anio=cuadroAnio){
       fillColor=[253,248,238];
     }
     const cdP=cancDia(doc.id,iso);
+    if(cdP.sumadas>0&&cdP.perdidas===0){borderColor=[10,122,74];turnoTxt=(turnoTxt||'D')+' $';turnoColor=[10,122,74];}
     if(cdP.perdidas>0){fillColor=[253,226,226];borderColor=[192,57,43];turnoTxt=(turnoTxt?turnoTxt+' ':'')+'CANC';turnoColor=[192,57,43];}
     pdf.setFillColor(fillColor[0],fillColor[1],fillColor[2]);
     pdf.setDrawColor(borderColor[0],borderColor[1],borderColor[2]);
@@ -4388,6 +4438,7 @@ function generarAgendaPdfDoc(doc,mes,anio=cuadroAnio){
       if(desglose.festDom>0) lineas.push(`Domingos/festivos: ${desglose.festDom}h x $130.000/h = ${fmt(desglose.festDom*130000)}`);
       if(desglose.extDiurno>0) lineas.push(`Extra diurna: ${desglose.extDiurno}h x $120.000/h = ${fmt(desglose.extDiurno*120000)}`);
       if(desglose.extNocturno>0) lineas.push(`Extra nocturna: ${desglose.extNocturno}h x $130.000/h = ${fmt(desglose.extNocturno*130000)}`);
+      if(desglose.cobH>0) lineas.push(`Salas canceladas cobradas (sin reposicion): ${desglose.cobH}h incluidas en los turnos`);
       if(desglose.cancH>0) lineas.push(`Salas canceladas sin reposicion: -${desglose.cancH}h = -${fmt(desglose.cancP)}`);
       lineas.forEach(l=>{pdf.text(l,marginX,y);y+=5;});
       y+=3;
@@ -5142,6 +5193,7 @@ function renderSalas(){
       const verNombres=salaCancPuedeVerNombres(c);
       const orig=(c.users||[]).map(u=>nombreCorto(getP(u.uid),u)).join(', ');
       const btnReact=APP.canEdit?`<button class="sala-ibtn" onclick="reactivarSala(${idx})" title="Reactivar la sala con los mismos anestesiologos">${SALA_ICO_REACT}</button>`:'';
+      const btnCobro=APP.canEdit&&(!c.comp||c.comp==='ninguna')?`<button class="btn sm" onclick="toggleCobroSala(${idx},'completa')" style="margin-top:6px;font-size:10px;padding:3px 8px;${c.cobrar?'color:#7a0000;border-color:#c0392b;background:#fff5f5;':'color:#0a5a3a;border-color:#0a7a4a;background:#f0faf5;'}">${c.cobrar?'Quitar cobro de horas':'💲 Cobrar horas a los anestesiólogos'}</button>`:'';
       card.innerHTML=`
         <div class="sala-hdr"><div class="sala-ttl"><div class="sala-name" title="${tl} — cancelada">${tl}</div></div><div class="sala-hdr-btns">${btnReact}</div></div>
         <div class="sala-body" style="padding-top:8px;">
@@ -5151,6 +5203,8 @@ function renderSalas(){
           ${salaCancCompTxt(c)?`<div class="sala-canc-det" style="color:#0a6a40;font-weight:600;">${escHtml(salaCancCompTxt(c))}</div>`:''}
           ${(verNombres&&c.obs)?`<div class="sala-canc-det" style="font-style:italic;">${escHtml(c.obs)}</div>`:''}
           ${orig?`<div class="sala-canc-orig">${escHtml(orig)}</div>`:''}
+          ${c.cobrar?`<div class="sala-canc-det" style="color:#0a6a40;font-weight:700;">💲 HORAS COBRADAS (${salaCancHoras(c)} h c/u) · ${escHtml(cobroMotivoTxt(c.cobrar))}</div>`:''}
+          ${btnCobro}
           <div class="sala-canc-meta">${c.por_nombre?escHtml(c.por_nombre)+' · ':''}${c.en?fechaHoraBogota(c.en):''}</div>
         </div>`;
       grid.appendChild(card);
@@ -5181,6 +5235,7 @@ function renderSalas(){
         bodyHtml+=`<div class="sala-parcial" title="${escHtml(SALA_CANC_ALC[cp.alcance]+' cancelada — '+(SALA_CANC_CAT[cp.categoria]||'')+(cp.detalle?' · '+cp.detalle:'')+(comp?' · '+comp:''))}">
           <div class="sala-parcial-txt"><b>${cp.alcance==='am'?'AM':'PM'} CANCELADA · 6 h QUIROFANO</b><br>${salaCancMotivoTxt(cp,verN)}${cp.detalle?' · '+escHtml(cp.detalle):''}${comp?`<br><span style="color:#0a6a40;font-weight:600;">${escHtml(comp)}</span>`:''}${salaEfectivasTxt(cp,sala.users).map(t=>`<br><span style="color:#1a5cbf;font-weight:600;">${escHtml(t)}</span>`).join('')}</div>
           ${APP.canEdit?`<button class="sala-ibtn" onclick="quitarCancParcial(${idx})" title="Quitar el registro de media jornada cancelada">${SALA_ICO_REACT}</button>`:''}
+          ${APP.canEdit&&(!cp.comp||cp.comp==='ninguna')?`<button class="sala-ibtn" onclick="toggleCobroSala(${idx},'parcial')" title="${cp.cobrar?'Quitar cobro de horas':'Cobrar las 6 h canceladas a los anestesiologos de la sala'}" style="${cp.cobrar?'color:#0a7a4a;font-weight:700;':''}">$</button>`:''}
         </div>`;
       }
     } else {
@@ -5509,6 +5564,12 @@ function scAlcanceChanged(){
     ?'La sala queda marcada como <strong>cancelada</strong>: sale del texto del programa y deja de figurar como asignacion de los anestesiologos. Se puede reactivar despues.'
     :`Se registra la <strong>media jornada ${a==='am'?'AM':'PM'} cancelada</strong> para estadisticas. La sala y sus anestesiologos siguen en el programa (marcada como "SOLO ${a==='am'?'PM':'AM'}"). Se puede quitar despues.`;
 }
+function scCobrarChanged(){
+  const on=!!document.getElementById('sc-cobrar')?.checked;
+  const o=document.getElementById('sc-cobrar-opts');if(o)o.style.display=on?'block':'none';
+  const comp=document.getElementById('sc-comp');
+  if(on&&comp&&comp.value!=='ninguna'){comp.value='ninguna';scCompChanged();}
+}
 function scCompChanged(){
   const v=document.getElementById('sc-comp')?.value;
   const on=!!(v&&v!=='ninguna');
@@ -5579,6 +5640,7 @@ function abrirCancelarSala(idx){
   document.getElementById('sc-obs').value=prev?.obs||'';
   document.getElementById('sc-comp').value=prev?.comp||'ninguna';
   document.getElementById('sc-comp-det').value=prev?.comp_det||'';
+  {const cb=document.getElementById('sc-cobrar');if(cb){cb.checked=!!prev?.cobrar;document.getElementById('sc-cobrar-mot').value=prev?.cobrar?.motivo||'menos24';document.getElementById('sc-cobrar-det').value=prev?.cobrar?.det||'';scCobrarChanged();}}
   const alc=prev?.alcance||'completa';
   document.querySelectorAll('input[name="sc-alcance"]').forEach(r=>r.checked=(r.value===alc));
   if(prev?.anest_uid) document.getElementById('sc-anest').value=prev.anest_uid;
@@ -5625,6 +5687,7 @@ async function confirmarCancelarSala(){
     comp,
     comp_det:(comp!=='ninguna'&&compDet)?compDet:null,
     comp_uid:comp!=='ninguna'?(document.getElementById('sc-comp-uid').value||null):null,
+    cobrar:(document.getElementById('sc-cobrar')?.checked&&comp==='ninguna')?{motivo:document.getElementById('sc-cobrar-mot').value||'menos24',det:(document.getElementById('sc-cobrar-det').value||'').trim()||null,por:APP.user?.id||null,en:new Date().toISOString()}:null,
     comp_nombre:comp!=='ninguna'?(()=>{const id=document.getElementById('sc-comp-uid').value;const u=(sala.users||[]).find(x=>x.uid===id);return id?nombreCorto(getP(id),u):null;})():null,
     categoria:cat,
     detalle:detalle||null,
@@ -5645,6 +5708,24 @@ async function confirmarCancelarSala(){
     sala.canc_parcial=reg;
   }
   closeModal('modal-cancelar-sala');
+  renderSalas();
+  await guardarDist();
+}
+async function toggleCobroSala(idx,tipo){
+  if(!APP.canEdit){toast('Solo el administrador puede cobrar horas de salas canceladas','info');return;}
+  const sala=salasCur[idx];if(!sala)return;
+  const c=tipo==='parcial'?sala.canc_parcial:sala.cancelada;if(!c)return;
+  const afect=(tipo==='parcial'?sala.users:c.users)||[];
+  const nombres=afect.map(u=>nombreCorto(getP(u.uid),u)).join(', ')||'—';
+  const h=salaCancHoras(c);
+  if(c.cobrar){
+    if(!confirm(`Quitar el cobro de horas de ${salaLabel(sala)}?\n\nA ${nombres} se les volverán a descontar las ${h} h canceladas.`))return;
+    c.cobrar=null;
+  } else {
+    const r=prompt(`Cobrar ${h} h de ${salaLabel(sala)} a: ${nombres}\n\nMotivo (Enter = cancelada con menos de 24 h de anticipación, sin reposición):`,'');
+    if(r===null)return;
+    c.cobrar={motivo:r.trim()?'otro':'menos24',det:r.trim()||null,por:APP.user?.id||null,en:new Date().toISOString()};
+  }
   renderSalas();
   await guardarDist();
 }
