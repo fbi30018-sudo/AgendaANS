@@ -2129,6 +2129,12 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.28.0',n:'Hospitalario de apoyo en consulta (doble agenda)',f:'2026-11-04',cambios:[
+    'Nuevo: al asignar un medico hospitalario (rol Interconsulta, p. ej. Dr. Miguel Gonzalez) a un consultorio en "Distribucion de Salas", se elige con que anestesiologo va emparejado ("Acompaña a"). Si en el consultorio hay un solo anestesiologo se empareja automaticamente.',
+    'Casilla "Doble agenda": si se marca, las horas del hospitalario (12 h en jornada completa, 6 h en media jornada) se suman al anestesiologo que lo acompaña, porque es quien lo paga. Con dos hospitalarios se suman las horas de cada uno.',
+    'Esas horas aparecen en el cuadro de turnos (chip verde azulado +12/+6), en el calendario, en la facturacion estimada (linea "Doble agenda con hospitalario"), en el PDF y en el Excel, con tarifa diurna (sabado incluido) o de domingo/festivo segun el dia.',
+    'Solo el administrador ve el emparejamiento: en la tarjeta del consultorio y en la fila del hospitalario del cuadro (chip ↔ con las iniciales del anestesiologo; al pasar el cursor se ve el consultorio y el nombre). En el programa de WhatsApp el hospitalario sale como uno mas, sin distincion.'
+  ]},
   {v:'2.27.0',n:'Cobro y ajuste de horas de salas canceladas',f:'2026-11-04',cambios:[
     'Nuevo: al cancelar una sala sin compensación se puede marcar "Cobrar estas horas a los anestesiólogos de la sala" con el motivo (por defecto: cancelada con menos de 24 h de anticipación, sin reposición).',
     'En la tarjeta de la sala cancelada (y en la franja de media jornada) el administrador tiene el botón "💲 Cobrar horas" para activarlo o quitarlo después.',
@@ -3090,6 +3096,7 @@ function renderCuadro(){
     let h=0;
     dias.forEach(({iso})=>{
       const dp=getDisp(doc.id,iso);
+      hospExtras(doc.id,iso).forEach(ex=>{ h+=ex.horas; });
       if(!dp) return;
       if(dp.turnos&&!dp.turnos.includes('no')) dp.turnos.forEach(t=>{ h+=TURNO_H_C[t]||0; });
       (dp.extras||[]).forEach(ex=>{ h+=ex.horas||0; });
@@ -3206,6 +3213,21 @@ function renderCuadro(){
         if(cdC.items.length) ttl=(ttl?ttl+'\n':'')+cancDiaTitle(cdC);
         if(cobroSinTurno(cdC,dp)&&!lbl.includes('tk mt')){lbl+=`<span class="tk" style="background:#0a7a4a;color:#fff;font-size:6px;display:block;line-height:1.3;">$${cdC.sumadas}</span>`;diasT++;}
         if(cdC.perdidas>0){bg2='background:#fde2e2;box-shadow:inset 0 0 0 1px #c0392b;';lbl+=`<span class="tk" style="background:#c0392b;color:#fff;font-size:6px;display:block;line-height:1.3;">C−${cdC.perdidas}</span>`;}
+        // v2.28.0 — doble agenda con hospitalario (suma al anestesiologo)
+        const hxC=hospExtras(doc.id,iso);
+        if(hxC.length){
+          if(!lbl) diasT++;
+          lbl+=`<span class="tk" style="background:#0e7490;color:#fff;font-size:6px;display:block;line-height:1.3;">+${hxC.reduce((a,e)=>a+e.horas,0)}H</span>`;
+          ttl=(ttl?ttl+'\n':'')+hospTitle(hxC);
+        }
+        // Fila del hospitalario: con quien quedo (solo administrador)
+        if(APP.isAdmin&&esHosp(doc)){
+          const haC=hospAcomp(doc.id,iso);
+          if(haC.length){
+            lbl+=haC.map(a=>`<span class="tk" style="background:${a.doble?'#0e7490':'#64748b'};color:#fff;font-size:6px;display:block;line-height:1.3;">↔${a.con?inics(getP(a.con)):'?'}</span>`).join('');
+            ttl=(ttl?ttl+'\n':'')+hospAcompTitle(haC);
+          }
+        }
         r+=`<td style="${bg2}"${ttl?` title="${escObs(ttl)}"`:''}>${lbl}</td>`;
       });
       r+=`<td style="text-align:center;font-family:var(--mono);font-size:9px;font-weight:700;color:${diasT>0?'#0a6a40':'#9ab0c8'};">${diasT||'—'}</td>`;
@@ -3404,6 +3426,8 @@ function mdmRenderGrid(){
     const cdM=cancDia(uid,iso);
     if(cdM.perdidas>0){bg='background:#fde2e2;border-color:#c0392b;border-width:2px;';dots+=chipCancCal(cdM);}
     else if(cdM.compensadas>0||cdM.sumadas>0){if(cdM.sumadas>0&&!bg)bg='background:#e6f5ee;border-color:#0a7a4a;border-width:2px;';dots+=chipCancCal(cdM);}
+    const hxM=hospExtras(uid,iso);
+    if(hxM.length){if(!bg)bg='background:#e0f2f7;border-color:#0e7490;border-width:2px;';dots+=chipHospCal(hxM,iso,dt);}
     // Declarar puedeEditar ANTES de usarlo
     const tri2=triDeM(_mdmMes,anio);
     const puedeEditar=APP.isAdmin||(tri2&&triActivo(tri2));
@@ -3744,7 +3768,7 @@ function cancDia(uid,iso){
 const COBRO_MOT={menos24:'Cancelada con menos de 24 h de anticipación, sin reposición',otro:'Otro motivo'};
 function cobroMotivoTxt(cb){if(!cb)return '';return (COBRO_MOT[cb.motivo]||cb.motivo||'Cobro de horas')+(cb.det?' — '+cb.det:'');}
 // Dia que cuenta para horas: turnos/extras en agenda o sala cancelada cuyas horas se cobran
-function diaCuenta(uid,iso,dp){return dpCuentaHoras(dp)||cancDia(uid,iso).sumadas>0;}
+function diaCuenta(uid,iso,dp){return dpCuentaHoras(dp)||cancDia(uid,iso).sumadas>0||hospExtras(uid,iso).length>0;}
 const TURNOS_DIURNOS=['dia','guardia','h6m','h6t','cx','cxam','cxpm'];
 // Horas cobradas de una sala cancelada que NO estan ya en la agenda (sin turno diurno ese dia)
 function cobroSinTurno(cd,dp){return (cd.sumadas>0&&!((dp&&dp.turnos)||[]).some(t=>TURNOS_DIURNOS.includes(t)))?cd.sumadas:0;}
@@ -3758,6 +3782,52 @@ function chipCancCal(cd){
   return '';
 }
 function dpTieneExtras(dp){return !!(dp&&dp.extras&&dp.extras.some(ex=>(ex.horas||0)>0));}
+// ══════════════════════════════════════════════════════════════
+//  v2.28.0 — HOSPITALARIO DE APOYO EN CONSULTA (DOBLE AGENDA)
+//  En sala.users (distribuciones.asignaciones, jsonb — sin columnas nuevas)
+//  la entrada de un hospitalario (rol interconsulta) lleva:
+//    con:   uid del anestesiologo con quien va emparejado (quien lo paga)
+//    doble: true si es doble agenda -> sus horas suman a ese anestesiologo
+//  Las horas se calculan en vivo desde la distribucion (como las salas
+//  canceladas), asi no se duplican en disponibilidad.extras.
+// ══════════════════════════════════════════════════════════════
+const HOSP_TURNO_H={dia:12,cx:12,h6m:6,h6t:6,cxam:6,cxpm:6,noche:12,guardia:24};
+const HOSP_TURNO_INI={h6t:'13:00',cxpm:'13:00',noche:'19:00'};
+function esHosp(doc){return !!doc&&doc.rol==='interconsulta';}
+function nomDoc(uid){const d=getP(uid);return d?(d.nombre+' '+d.apellidos):'—';}
+// Horas que le suman al anestesiologo uid por hospitalarios en doble agenda (formato tipo extras)
+function hospExtras(uid,iso){
+  const out=[];if(!uid) return out;
+  ((APP.dist&&APP.dist[iso]&&APP.dist[iso].salas)||[]).forEach(s=>{
+    if(s.cancelada) return;
+    (s.users||[]).forEach(u=>{
+      if(u.con!==uid||!u.doble) return;
+      const t=u.turno||'dia';
+      out.push({horas:HOSP_TURNO_H[t]||12,inicio:HOSP_TURNO_INI[t]||'07:00',hosp:u.uid,
+        nota:'Doble agenda — '+nomDoc(u.uid)+' ('+salaLabel(s)+')'});
+    });
+  });
+  return out;
+}
+// Extras efectivas del dia: las registradas + doble agenda con hospitalario
+function extrasEf(dp,uid,iso){return [...((dp&&dp.extras)||[]),...hospExtras(uid,iso)];}
+// Para la fila del hospitalario: en que consultorio y con quien quedo
+function hospAcomp(uid,iso){
+  const out=[];
+  ((APP.dist&&APP.dist[iso]&&APP.dist[iso].salas)||[]).forEach(s=>{
+    if(s.cancelada) return;
+    (s.users||[]).forEach(u=>{if(u.uid===uid&&esHosp(getP(uid))) out.push({sala:salaLabel(s),con:u.con||null,doble:!!u.doble,horas:HOSP_TURNO_H[u.turno||'dia']||12});});
+  });
+  return out;
+}
+function hospTitle(hx){return hx.map(e=>'+'+e.horas+' h · '+e.nota).join('\n');}
+function hospAcompTitle(ha){return ha.map(a=>a.sala+' — acompaña a '+(a.con?nomDoc(a.con):'(sin emparejar)')+(a.doble?' · doble agenda: '+a.horas+' h al anestesiologo':' · sin doble agenda')).join('\n');}
+function chipHospCal(hx,iso,dt){
+  const fd=esFest(iso)||dt.getDay()===0;let h=0,p=0;
+  hx.forEach(ex=>{const ini=parseInt(ex.inicio.split(':')[0]);h+=ex.horas;p+=ex.horas*(fd||ini<7||ini>=19?130000:120000);});
+  const f=n=>new Intl.NumberFormat('es-CO',{maximumFractionDigits:0}).format(n);
+  return `<div style="display:flex;justify-content:center;margin-top:1px;"><span style="background:#0e7490;color:#fff;font-size:7px;font-weight:700;padding:1px 3px;border-radius:2px;" title="${escObs(hospTitle(hx))}">2ª AG +${h}h</span></div><div style="font-size:7px;font-family:var(--mono);color:#0e7490;font-weight:700;text-align:center;">$${f(p/1000)}k</div>`;
+}
 function dpCuentaHoras(dp){return !!(dp&&((dp.turnos&&dp.turnos.length&&!dp.turnos.includes('no'))||dpTieneExtras(dp)));}
 function renderDispMesGrid(y,m,editable){
   const uid=APP.user.id,hoy=toISO(new Date());
@@ -3820,6 +3890,8 @@ function renderDispMesGrid(y,m,editable){
     const cdD=cancDia(uid,iso);
     if(cdD.perdidas>0){bg='background:#fde2e2;border-color:#c0392b;border-width:2px;';dots+=chipCancCal(cdD);}
     else if(cdD.compensadas>0||cdD.sumadas>0){if(cdD.sumadas>0&&!bg)bg='background:#e6f5ee;border-color:#0a7a4a;border-width:2px;';dots+=chipCancCal(cdD);}
+    const hxD=hospExtras(uid,iso);
+    if(hxD.length){if(!bg)bg='background:#e0f2f7;border-color:#0e7490;border-width:2px;';dots+=chipHospCal(hxD,iso,dt);}
     // Dias ya pasados: solo el administrador puede editarlos (jornada cumplida)
     const esPasado=iso<hoy;
     const editableDia=editable&&(APP.canEdit||!esPasado);
@@ -3878,8 +3950,8 @@ function exportarExcel(){
           else pDia+=h*120000;
         });
         // Extras
-        if(dp.extras&&dp.extras.length){
-          dp.extras.forEach(ex=>{
+        if(extrasEf(dp,doc.id,iso).length){
+          extrasEf(dp,doc.id,iso).forEach(ex=>{
             const h=ex.horas||0;if(!h)return;
             const iniH=parseInt((ex.inicio||'07:00').split(':')[0]);
             const diurna=iniH>=7&&iniH<19;
@@ -3938,11 +4010,11 @@ function exportarExcel(){
         pDia+=h*(esDomFest||t==='noche'?130000:120000);
       });
       // Extras
-      if(dp.extras&&dp.extras.length){
-        dp.extras.forEach(ex=>{
+      if(extrasEf(dp,doc.id,iso).length){
+        extrasEf(dp,doc.id,iso).forEach(ex=>{
           const h=ex.horas||0;if(!h)return;
           const iniH=parseInt((ex.inicio||'07:00').split(':')[0]);
-          hDia+=h;totExtH+=h;lbl.push('+'+h+'h');
+          hDia+=h;totExtH+=h;lbl.push((ex.hosp?'2aAG+':'+')+h+'h');
           pDia+=h*(esDomFest||iniH<7||iniH>=19?130000:120000);
         });
       }
@@ -4006,7 +4078,7 @@ function exportarExcel(){
         const obs=dp?.observaciones||'';
 
         // Extras
-        const extras=(dp&&dp.extras)||[];
+        const extras=doc?extrasEf(dp,doc.id,iso):[];
         if(!extras.length){
           rowsSal.push([
             iso, DN2[dt.getDay()], salaLabel(sala), sala.tipo, turnoAsig,
@@ -4031,7 +4103,7 @@ function exportarExcel(){
             const val=h*tarifa;
             totalExtH+=h; totalExtP+=val;
             rowsSal.push([
-              '', '', '', '', '→ Horas extra',
+              '', '', '', '', ex.hosp?'→ Doble agenda (hospitalario '+nomDoc(ex.hosp)+')':'→ Horas extra',
               nombre, empresa, '', '',
               ex.inicio||'', ex.fin||'', h, '',
               ''
@@ -4085,8 +4157,8 @@ function exportarExcel(){
         else if(t==='noche'){hNoc+=h;pTurnos+=h*130000;}
         else{hDiu+=h;pTurnos+=h*120000;}
       });
-      if(dp.extras&&dp.extras.length){
-        dp.extras.forEach(ex=>{
+      if(extrasEf(dp,doc.id,iso).length){
+        extrasEf(dp,doc.id,iso).forEach(ex=>{
           const h=ex.horas||0;if(!h)return;
           const iniH=parseInt((ex.inicio||'07:00').split(':')[0]);
           const diurna=iniH>=7&&iniH<19;
@@ -4204,8 +4276,9 @@ function calcFacturacion(uid, meses, anio=cuadroAnio){
         desglose.cancP=(desglose.cancP||0)+cdF.perdidas*v;
       }
       // ── Horas extras ─────────────────────────────────────────
-      if(dp.extras&&dp.extras.length){
-        dp.extras.forEach(ex=>{
+      if(extrasEf(dp,uid,iso).length){
+        extrasEf(dp,uid,iso).forEach(ex=>{
+          if(ex.hosp) desglose.hospH=(desglose.hospH||0)+(ex.horas||0);
           const h=ex.horas||0;
           if(!h) return;
           const iniH=parseInt((ex.inicio||'07:00').split(':')[0]);
@@ -4249,6 +4322,7 @@ function renderFacturacion(uid, meses, containerId, anio=cuadroAnio){
         ${(desglose.extDiurno||0)+(desglose.extNocturno||0)>0?`<div style="font-size:11px;border-top:1px dashed #c8d4e0;padding-top:5px;margin-top:3px;font-style:italic;color:#555;">Extras registradas:</div>`:''}
         ${desglose.extDiurno>0?`<div style="font-size:11px;padding-left:10px;"><span style="color:#4e6c8a;">↳ Extra diurna (07-19h):</span> <b>${desglose.extDiurno}h</b> × $120.000/h = <b style="color:#0a6a40;">${fmt(desglose.extDiurno*120000)}</b></div>`:''}
         ${desglose.extNocturno>0?`<div style="font-size:11px;padding-left:10px;"><span style="color:#4e6c8a;">↳ Extra nocturna (≥19h):</span> <b>${desglose.extNocturno}h</b> × $130.000/h = <b style="color:#3030a0;">${fmt(desglose.extNocturno*130000)}</b></div>`:''}
+        ${desglose.hospH>0?`<div style="font-size:11px;padding-left:10px;"><span style="color:#0e7490;font-weight:600;">↳ Doble agenda con hospitalario:</span> <b style="color:#0e7490;">${desglose.hospH}h</b> <span style="color:#8aa8c0;">incluidas en las extras</span></div>`:''}
         ${desglose.cobH>0?`<div style="font-size:11px;border-top:1px dashed #c8d4e0;padding-top:5px;margin-top:3px;"><span style="color:#0a7a4a;font-weight:600;">Salas canceladas cobradas (sin reposición):</span> <b style="color:#0a7a4a;">${desglose.cobH}h</b> <span style="color:#8aa8c0;">incluidas en los turnos</span></div>`:''}
         ${desglose.cancH>0?`<div style="font-size:11px;border-top:1px dashed #c8d4e0;padding-top:5px;margin-top:3px;"><span style="color:#c0392b;font-weight:600;">Salas canceladas sin reposición:</span> <b style="color:#c0392b;">−${desglose.cancH}h</b> = <b style="color:#c0392b;">−${fmt(desglose.cancP)}</b></div>`:''}
       </div>
@@ -4387,9 +4461,9 @@ function generarAgendaPdfDoc(doc,mes,anio=cuadroAnio){
       pdf.setTextColor(turnoColor[0],turnoColor[1],turnoColor[2]);
       pdf.text(turnoTxt,cx+cellW/2,cyPos+cellH/2+2,{align:'center'});
     }
-    if(dp&&dp.extras&&dp.extras.length){
+    if(extrasEf(dp,doc.id,iso).length){
       let extH=0;
-      dp.extras.forEach(ex=>{extH+=ex.horas||0;});
+      extrasEf(dp,doc.id,iso).forEach(ex=>{extH+=ex.horas||0;});
       if(extH>0){
         pdf.setFontSize(6);
         pdf.setFont('helvetica','normal');
@@ -5225,7 +5299,7 @@ function renderSalas(){
           <div class="sala-row-nom">${escHtml(corto)}</div>
           <span class="sala-emp${esIme?' ime':''}">${empresaStr(doc)}</span>
           ${salaTurnoChip(u.turno)}
-        </div>`;
+        </div>${(APP.isAdmin&&esHosp(doc))?`<div style="font-family:var(--mono);font-size:9px;color:${u.doble?'#0e7490':'#64748b'};padding:0 0 3px 30px;">↔ ${u.con?escHtml(salaNombreCorto(getP(u.con),{})):'sin emparejar'}${u.doble?' · doble agenda +'+(HOSP_TURNO_H[u.turno||'dia']||12)+'h':''}</div>`:''}`;
       }).join('');
       if(sala.obs) bodyHtml+=`<div class="sala-obs" title="${escHtml(sala.obs)}">${escHtml(sala.obs)}</div>`;
       if(sala.canc_parcial){
@@ -5368,7 +5442,8 @@ function editSala(idx){
   sel.innerHTML='<option value="">— Seleccionar —</option>';
   const docs=getDocs();
   const imes=docs.filter(d=>isIME(d));
-  const resto=docs.filter(d=>!isIME(d));
+  const hosps=docs.filter(d=>!isIME(d)&&esHosp(d));
+  const resto=docs.filter(d=>!isIME(d)&&!esHosp(d));
   function msAddHeader(txt){
     const h=document.createElement('option');h.disabled=true;h.textContent='── '+txt+' ──';
     sel.appendChild(h);
@@ -5392,6 +5467,16 @@ function editSala(idx){
       const turno=ok?dp.turnos.map(t=>({dia:'D',noche:'N',guardia:'24h',h6m:'6hM',h6t:'6hT'}[t]||t)).join('/'):'';
       const opt=document.createElement('option');opt.value=d.id;
       opt.textContent=`${d.nombre} ${d.apellidos} [${empresaStr(d)}] ${ok?'✓ '+turno:'○'}`;
+      sel.appendChild(opt);
+    });
+  }
+  if(hosps.length){
+    msAddHeader('Hospitalarios de apoyo');
+    hosps.forEach(d=>{
+      const dp=getDisp(d.id,distDate);
+      const ok=dp&&dp.turnos&&!dp.turnos.includes('no')&&dp.turnos.length;
+      const opt=document.createElement('option');opt.value=d.id;
+      opt.textContent=`🩺 ${d.nombre} ${d.apellidos} [Hospitalario] ${ok?'✓':'○'}`;
       sel.appendChild(opt);
     });
   }
@@ -5422,9 +5507,40 @@ function msRenderAsignados(){
         <div style="font-family:var(--mono);font-size:9px;color:#4e6c8a;">${u.turno||'dia'}${esIme&&u.cedula?` · CC ${u.cedula}`:''}</div>
       </div>
       ${esIme?`<button onclick="msEditarIME(${i})" style="background:none;border:none;cursor:pointer;color:#b45309;font-size:12px;" title="Editar nombre IME">✏</button>`:''}
-      <button onclick="_msUsers.splice(${i},1);msRenderAsignados();" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:14px;">✕</button>`;
+      <button onclick="msQuitar(${i})" style="background:none;border:none;cursor:pointer;color:#c0392b;font-size:14px;">✕</button>`;
     el.appendChild(div);
+    if(esHosp(doc)){
+      const anes=_msUsers.filter(x=>!esHosp(getP(x.uid)));
+      const pr=document.createElement('div');
+      pr.style.cssText='display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-2px 0 2px 32px;padding:5px 8px;background:#ecfeff;border:1px solid #a5d8e6;border-radius:4px;font-size:11px;';
+      pr.innerHTML=`<label style="font-family:var(--mono);font-size:9px;color:#0e7490;text-transform:uppercase;letter-spacing:.5px;">Acompaña a</label>
+        <select onchange="msHospCon(${i},this.value)" style="flex:1;min-width:150px;font-size:11px;padding:3px 6px;background:#fff;color:#0d1f35;border:1px solid #a5d8e6;border-radius:3px;">
+          <option value="">— Sin emparejar —</option>
+          ${anes.map(x=>`<option value="${x.uid}"${x.uid===u.con?' selected':''}>${escHtml(nomDoc(x.uid))}</option>`).join('')}
+        </select>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:#0e7490;font-weight:600;"><input type="checkbox" ${u.doble?'checked':''} onchange="msHospDoble(${i},this.checked)"> Doble agenda (+${HOSP_TURNO_H[u.turno||'dia']||12} h al anestesiólogo)</label>`;
+      el.appendChild(pr);
+    }
   });
+}
+function msQuitar(i){
+  const q=_msUsers[i];
+  _msUsers.splice(i,1);
+  // Si se quita un anestesiologo, sus hospitalarios quedan sin emparejar
+  if(q) _msUsers.forEach(x=>{if(x.con===q.uid){x.con=null;x.doble=false;}});
+  msAutoEmparejar();msRenderAsignados();
+}
+function msHospCon(i,uid){if(!_msUsers[i])return;_msUsers[i].con=uid||null;if(!uid)_msUsers[i].doble=false;msRenderAsignados();}
+function msHospDoble(i,v){
+  if(!_msUsers[i])return;
+  if(v&&!_msUsers[i].con){toast('Primero elige el anestesiólogo que acompaña el hospitalario','info');msRenderAsignados();return;}
+  _msUsers[i].doble=!!v;
+}
+// Si hay un solo anestesiologo en el consultorio, los hospitalarios sin pareja quedan con el
+function msAutoEmparejar(){
+  const anes=_msUsers.filter(x=>!esHosp(getP(x.uid)));
+  if(anes.length!==1) return;
+  _msUsers.forEach(x=>{if(esHosp(getP(x.uid))&&!x.con) x.con=anes[0].uid;});
 }
 function msEditarIME(i){
   const u=_msUsers[i];
@@ -5464,6 +5580,7 @@ function msAgregarDoc(){
     entry.cedula=cedula;
   }
   _msUsers.push(entry);
+  msAutoEmparejar();
   msRenderAsignados();
   document.getElementById('ms-doc').value='';
   const row=document.getElementById('ms-ime-row');if(row)row.style.display='none';
@@ -5474,8 +5591,14 @@ function asignarSala(){
   salasCur[idx].users=[..._msUsers];
   salasCur[idx].obs=document.getElementById('ms-obs').value;
   // Compat legacy
-  salasCur[idx].user_id=_msUsers.length?_msUsers[0].uid:null;
-  salasCur[idx].turno=_msUsers.length?_msUsers[0].turno:'dia';
+  // El titular legacy es el primer anestesiologo (no el hospitalario de apoyo)
+  const tit=_msUsers.find(x=>!esHosp(getP(x.uid)))||_msUsers[0];
+  salasCur[idx].user_id=tit?tit.uid:null;
+  salasCur[idx].turno=tit?tit.turno:'dia';
+  // Limpiar parejas que ya no estan en la sala
+  salasCur[idx].users.forEach(x=>{if(x.con&&!salasCur[idx].users.some(y=>y.uid===x.con)){x.con=null;x.doble=false;}});
+  const sinPareja=salasCur[idx].users.filter(x=>esHosp(getP(x.uid))&&!x.con);
+  if(sinPareja.length) toast('Hay un hospitalario sin anestesiólogo emparejado en '+salaLabel(salasCur[idx]),'info');
   closeModal('modal-sala');renderSalas();
 }
 function limpiarSala(){
