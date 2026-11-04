@@ -2133,6 +2133,12 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.30.0',n:'Consulta externa: se cuentan consultorios, no personas',f:'2026-11-04',cambios:[
+    'Corregido: con hospitalarios emparejados en consulta externa, al anestesiólogo se le cuantifican N consultorios × la duración de su agenda (12 h CE Completa, 6 h CE Mañana/Tarde). Ej.: dos hospitalarios en dos consultorios y el anestesiólogo verificando = 2 × 12 = 24 h (antes sumaba 36 h).',
+    'Automático: con un hospitalario se asume que el anestesiólogo atiende el otro consultorio (2 consultorios); con dos o más, que los hospitalarios atienden cada uno un consultorio y el anestesiólogo verifica.',
+    'En el editor del día del anestesiólogo, sección "Agendas de consulta": casilla "El anestesiólogo atiende un consultorio" y número de consultorios, para ajustarlo cuando el día no siga lo usual. "Restablecer automático" vuelve a la regla por defecto.',
+    'Sin turno de consulta externa del anestesiólogo (p. ej. interconsulta entre semana) se siguen sumando las horas del hospitalario tal cual.'
+  ]},
   {v:'2.29.0',n:'Emparejamiento hospitalario–anestesiólogo',f:'2026-11-04',cambios:[
     'Nuevo perfil al registrarse: "Hospitalario de anestesiología" (interconsultas y consulta externa).',
     'Las horas que el hospitalario tiene en su agenda (6M = 6 h, Día = 12 h, etc.) se suman al anestesiólogo con quien queda emparejado y entran a su cuantificación (cuadro, calendario, facturación, PDF y Excel). Ya no hace falta ingresarlas como horas extras.',
@@ -3842,9 +3848,38 @@ function hospPareja(hosp,iso){
   return null;
 }
 function hospParejaEsDefecto(hosp,iso){return hospParejaReg(hosp,iso)===undefined&&!!hospPareja(hosp,iso);}
-// Horas que le suman al anestesiologo uid (formato tipo extras, una por turno)
+// ── v2.30.0 — Consulta externa: se cuantifican CONSULTORIOS (agendas), no personas ──
+// cfg.agendas[anestUid] = {n: consultorios, atiende: el anestesiologo atiende uno}
+const CONS_T={cx:12,cxam:6,cxpm:6};
+function anesConsulta(uid,iso){
+  const t=(((getDisp(uid,iso)||{}).turnos)||[]).filter(x=>CONS_T[x]);
+  return {h:t.reduce((a,x)=>a+CONS_T[x],0),ini:(t.length&&t.every(x=>x==='cxpm'))?'13:00':'07:00'};
+}
+function agendasCfg(uid,iso){const a=APP.dist&&APP.dist[iso]&&APP.dist[iso].cfg&&APP.dist[iso].cfg.agendas;return (a&&a[uid])||null;}
+function hospsDe(uid,iso){return hospsAll().filter(h=>h.id!==uid&&hospPareja(h.id,iso)===uid&&hospHoras(h.id,iso)>0);}
+// Resumen de agendas de consulta del dia (null = no aplica: se suman horas del hospitalario tal cual)
+function agendasDia(uid,iso){
+  if(!uid||iso<HOSP_DESDE) return null;
+  const hs=hospsDe(uid,iso);if(!hs.length) return null;
+  const own=anesConsulta(uid,iso),cfg=agendasCfg(uid,iso);
+  if(!cfg&&!own.h) return null;
+  const atiende=cfg?!!cfg.atiende:(hs.length===1);
+  const n=(cfg&&cfg.n)?cfg.n:(hs.length+(atiende?1:0));
+  const dur=own.h||Math.max(...hs.map(h=>hospHoras(h.id,iso)));
+  const total=n*dur;
+  return {hs,atiende,n,dur,own:own.h,ini:own.ini,total,extra:Math.max(0,total-own.h),manual:!!cfg};
+}
+function agendasNota(ag){
+  return `Consulta externa: ${ag.n} consultorio${ag.n>1?'s':''} × ${ag.dur} h = ${ag.total} h (${ag.atiende?'el anestesiólogo atiende uno':'el anestesiólogo verifica'}; hospitalarios: ${ag.hs.map(h=>nomDoc(h.id)).join(', ')})${ag.own?' — incluye su CE de '+ag.own+' h':''}`;
+}
+// Horas que le suman al anestesiologo uid (formato tipo extras)
 function hospExtras(uid,iso){
   const out=[];if(!uid||iso<HOSP_DESDE) return out;
+  const ag=agendasDia(uid,iso);
+  if(ag){
+    if(ag.extra>0) out.push({horas:ag.extra,inicio:ag.ini,hosp:ag.hs[0].id,nota:agendasNota(ag)});
+    return out;
+  }
   hospsAll().forEach(h=>{
     if(h.id===uid||hospPareja(h.id,iso)!==uid) return;
     hospTurnos(h.id,iso).forEach(t=>{
@@ -3875,22 +3910,46 @@ function chipAcompCal(ha){
   const a=ha[0];
   return `<div style="display:flex;justify-content:center;margin-top:1px;"><span style="background:${a.con?'#0e7490':'#94a3b8'};color:#fff;font-size:7px;font-weight:700;padding:1px 3px;border-radius:2px;" title="${escObs(hospAcompTitle(ha))}">↔ ${a.con?inics(getP(a.con)):'?'}</span></div>`;
 }
-// Guarda el emparejamiento del dia. con: uid | null (sin pareja) | '__def' (volver al defecto)
-async function guardarPareja(iso,hosp,con){
-  if(!APP.isAdmin){toast('Solo el administrador puede emparejar','info');return false;}
+// Escribe en distribuciones.cfg del dia (crea la fila si no existe). fn(cfg) modifica la copia.
+async function guardarCfgDia(iso,fn){
+  if(!APP.isAdmin){toast('Solo el administrador puede editar esto','info');return false;}
   try{if(typeof cargarDistribucion==='function') await cargarDistribucion(iso);}catch(e){}
   const ex=APP.dist[iso];
   const cfg={...((ex&&ex.cfg)||{salas:6,consultorios:2,interconsultas:1})};
-  const parejas={...(cfg.parejas||{})};
-  if(con==='__def') delete parejas[hosp];
-  else parejas[hosp]={con:con||null,turnos:((getDisp(hosp,iso)||{}).turnos||[]).filter(t=>t!=='no')};
-  cfg.parejas=parejas;
+  fn(cfg);
   let res;
   if(ex&&ex.id) res=await dbWrite('PATCH','distribuciones?id=eq.'+ex.id,{cfg});
   else res=await dbWrite('POST','distribuciones',{fecha:iso,cfg,asignaciones:[],creado_por:APP.user.id});
-  if(res.error){toast('Error al emparejar: '+res.error.message,'error');return false;}
+  if(res.error){toast('Error al guardar: '+res.error.message,'error');return false;}
   APP.dist[iso]={...(ex||{}),id:(res.data&&res.data.id)||(ex&&ex.id),cfg,salas:(ex&&ex.salas)||[]};
   return true;
+}
+// Guarda el emparejamiento del dia. con: uid | null (sin pareja) | '__def' (volver al defecto)
+function guardarPareja(iso,hosp,con){
+  return guardarCfgDia(iso,cfg=>{
+    const parejas={...(cfg.parejas||{})};
+    if(con==='__def') delete parejas[hosp];
+    else parejas[hosp]={con:con||null,turnos:((getDisp(hosp,iso)||{}).turnos||[]).filter(t=>t!=='no')};
+    cfg.parejas=parejas;
+  });
+}
+// Ajuste de agendas de consulta del anestesiologo. patch: {atiende} | {n} | null (restablecer)
+async function cambiarAgendas(iso,uid,patch){
+  const ag=agendasDia(uid,iso);
+  const nh=ag?ag.hs.length:hospsDe(uid,iso).length;
+  const ok=await guardarCfgDia(iso,cfg=>{
+    const a={...(cfg.agendas||{})};
+    if(patch===null) delete a[uid];
+    else{
+      const cur=a[uid]||{atiende:ag?ag.atiende:false,n:ag?ag.n:nh};
+      const nv={...cur,...patch};
+      if('atiende' in patch&&!('n' in patch)) nv.n=nh+(nv.atiende?1:0);
+      nv.n=Math.max(1,Math.min(8,parseInt(nv.n)||1));
+      a[uid]=nv;
+    }
+    cfg.agendas=a;
+  });
+  if(ok){toast('Agendas de consulta actualizadas','success');refrescarTrasPareja();}
 }
 // Refresca las vistas abiertas tras emparejar
 function refrescarTrasPareja(){
@@ -3937,7 +3996,17 @@ function medRenderPareja(uid,iso){
         <span style="flex:1;"><b>${escHtml(nomDoc(x.id))}</b> · ${hospHoras(x.id,iso)} h${(!mio&&con)?` <span style="color:#b45309;">(hoy con ${escHtml(nomDoc(con))})</span>`:''}${(mio&&hospParejaEsDefecto(x.id,iso))?' <span style="color:#64748b;">(por defecto)</span>':''}</span>
       </label>`;
     });
-    if(hs.some(x=>hospPareja(x.id,iso)===uid)) h+='<div style="font-family:var(--mono);font-size:9px;color:#0e7490;margin-top:3px;">Estas horas ya suman a este anestesiólogo: no las ingrese como horas extras.</div>';
+    const ag=agendasDia(uid,iso);
+    if(ag){
+      h+=`<div style="margin-top:8px;padding:8px 10px;background:#f0fbfd;border:1px solid #a5d8e6;border-radius:4px;">
+        <div style="font-family:var(--mono);font-size:9px;color:#0e7490;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Agendas de consulta${ag.manual?' · ajuste manual':' · automático'}</div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;margin-bottom:6px;"><input type="checkbox" ${ag.atiende?'checked':''} onchange="cambiarAgendas('${iso}','${uid}',{atiende:this.checked})"> El anestesiólogo atiende un consultorio (si no, solo verifica)</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;">Consultorios del día <input type="number" min="1" max="8" value="${ag.n}" onchange="cambiarAgendas('${iso}','${uid}',{n:this.value})" style="width:56px;font-size:12px;padding:3px 6px;background:#fff;color:#0d1f35;border:1px solid #a5d8e6;border-radius:3px;"></label>
+        <div style="font-size:11px;margin-top:6px;color:#0d1f35;"><b>${ag.n} × ${ag.dur} h = ${ag.total} h</b> de consulta${ag.own?` (su CE de ${ag.own} h + <b>${ag.extra} h</b> por los hospitalarios)`:''}</div>
+        ${ag.manual?`<button class="btn sm" onclick="cambiarAgendas('${iso}','${uid}',null)" style="margin-top:6px;font-size:10px;padding:2px 8px;">Restablecer automático</button>`:''}
+      </div>`;
+    }
+    if(hs.some(x=>hospPareja(x.id,iso)===uid)) h+='<div style="font-family:var(--mono);font-size:9px;color:#0e7490;margin-top:5px;">Estas horas ya se cuantifican a este anestesiólogo: no ingrese consultorios adicionales como horas extras.</div>';
   }
   el.innerHTML=h;el.style.display='';
 }
@@ -6434,6 +6503,7 @@ async function guardarDist(){
   const btn=document.getElementById('btn-save-dist');if(btn)btn.disabled=true;
   const ex=APP.dist[distDate];
   if(ex&&ex.cfg&&ex.cfg.parejas) cfg.parejas=ex.cfg.parejas; // v2.29.0 — no borrar emparejamientos
+  if(ex&&ex.cfg&&ex.cfg.agendas) cfg.agendas=ex.cfg.agendas;  // v2.30.0
   let res;
   if(ex?.id){res=await dbWrite('PATCH','distribuciones?id=eq.'+ex.id,{cfg,asignaciones:salasCur});}
   else{res=await dbWrite('POST','distribuciones',{fecha:distDate,cfg,asignaciones:salasCur,creado_por:APP.user.id});}
