@@ -91,10 +91,11 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
 .field input::placeholder{color:var(--ink3);}
 .field select option{background:var(--bg2);}
 .field textarea.obs-ta{
-  width:100%;box-sizing:border-box;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);
-  border-radius:var(--r);color:var(--ink);font-family:var(--sans);font-size:13px;line-height:1.4;outline:none;
+  width:100%;box-sizing:border-box;padding:10px 12px;background:#ffffff!important;border:1px solid #c8d4e0;
+  border-radius:var(--r);color:#0d1f35!important;color-scheme:light only;forced-color-adjust:none;font-family:var(--sans);font-size:13px;line-height:1.4;outline:none;
   min-height:44px;max-height:320px;resize:vertical;field-sizing:content;white-space:pre-wrap;
 }
+.field textarea.obs-ta::placeholder{color:#8aa8c0;}
 .field textarea.obs-ta:focus{border-color:var(--accent2);box-shadow:0 0 0 2px rgba(26,92,191,.15);}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .btn-primary{
@@ -2121,7 +2122,8 @@ const CHANGELOG=[
     'Esas horas se descuentan de la facturacion estimada (nueva linea "Salas canceladas sin reposicion"), del PDF de la agenda y del Excel (resumen, detalle y nueva columna en Horas por medico).',
     'Si la cancelacion fue compensada (consulta externa, otra sala, etc.) el dia conserva sus horas y muestra un chip ambar "CANC repuesta".',
     'En el cuadro consolidado la celda del dia cancelado sin reposicion tambien se ve en rojo.',
-    'Las agendas ahora cargan las distribuciones de salas del mes para poder cruzar las cancelaciones.'
+    'Las agendas ahora cargan las distribuciones de salas del mes para poder cruzar las cancelaciones.',
+    'El recuadro de Observaciones vuelve a ser blanco con letra oscura.'
   ]},
   {v:'2.25.0',n:'Observaciones ampliables y extras sin turno',f:'2026-11-04',cambios:[
     'El campo Observaciones del dia (editor del administrador y Mi Disponibilidad) ahora es un recuadro de varias lineas que crece con el texto y se puede agrandar arrastrando la esquina.',
