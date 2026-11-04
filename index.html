@@ -1759,6 +1759,7 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
       </div>
       <div id="med-extras" style="margin-top:6px;display:flex;flex-direction:column;gap:3px;"></div>
     </div>
+    <div id="med-asig" style="margin-top:10px;padding-top:10px;border-top:1px solid #c8d4e0;"></div>
     <div class="field" style="margin-top:10px;"><label>Observaciones</label><textarea id="med-obs" class="obs-ta" rows="2" placeholder="Ej: Solo hasta las 12:00..."></textarea></div>
     <input type="hidden" id="med-uid">
     <input type="hidden" id="med-iso">
@@ -2117,6 +2118,13 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.27.0',n:'Ajuste de horas de salas canceladas desde el calendario',f:'2026-11-04',cambios:[
+    'Nuevo: en el editor del día de cada anestesiólogo aparece la sección "Asignación de salas ese día": sala, turno asignado, si está activa o cancelada (completa o media jornada), el motivo y la compensación registrada en la distribución.',
+    'Doble verificación: avisa si el anestesiólogo está en una sala pero su agenda no tiene turno, si el turno de la agenda no coincide con el asignado, o si tiene turno pero no aparece en la distribución.',
+    'Solo el administrador: para cada sala cancelada se elige cómo se cuentan las horas para ese anestesiólogo — Descontar (con las horas editables), Sumar las horas (no descontar) o Compensada en otro servicio (con el servicio y el detalle).',
+    'El ajuste se guarda junto a la asignación en la distribución de salas y se refleja en el color del día, la facturación, el PDF y el Excel. El registro original de la cancelación se conserva para las estadísticas.',
+    'Chips del calendario: rojo "CANC −Xh" (se descuenta), ámbar "CANC repuesta" (compensada) y gris "CANC sumada" (el administrador decidió sumarla).'
+  ]},
   {v:'2.26.0',n:'Salas canceladas en la agenda del anestesiologo',f:'2026-11-04',cambios:[
     'Si una sala asignada se cancela SIN reposicion de horas, el dia queda en ROJO en la agenda del anestesiologo con el chip "CANC −12h" (o −6h en media jornada). Al pasar el cursor se ve la sala, el alcance y el motivo.',
     'Esas horas se descuentan de la facturacion estimada (nueva linea "Salas canceladas sin reposicion"), del PDF de la agenda y del Excel (resumen, detalle y nueva columna en Horas por medico).',
@@ -3416,7 +3424,135 @@ function medAbrirDia(uid,iso){
   document.getElementById('med-obs').value=dp.observaciones||'';
   medRefreshT();
   medRenderExtras();
+  medRenderAsig(uid,iso);
   openModal('modal-edit-dia');
+  // Datos frescos de la distribucion para la doble verificacion
+  if(typeof cargarDistribucion==='function') cargarDistribucion(iso).then(()=>{
+    if(document.getElementById('med-iso')?.value===iso&&document.getElementById('med-uid')?.value===uid) medRenderAsig(uid,iso);
+  }).catch(()=>{});
+}
+
+// ── v2.27.0 — Asignacion de salas del dia: verificacion cruzada y ajuste de
+// horas de salas canceladas. Solo el administrador ve y edita los controles.
+let _medCanc=[]; // [{sid,idx,tipo:'completa'|'parcial',horas,defModo,defComp}]
+function medSalasDelDia(uid,iso){
+  const out=[];
+  (((APP.dist||{})[iso]||{}).salas||[]).forEach((s,idx)=>{
+    const uAct=(s.users||[]).find(x=>x.uid===uid);
+    const uCan=s.cancelada?(s.cancelada.users||[]).find(x=>x.uid===uid):null;
+    if(uAct) out.push({s,idx,u:uAct,tipo:s.canc_parcial?'parcial':'activa',c:s.canc_parcial||null});
+    else if(uCan) out.push({s,idx,u:uCan,tipo:'completa',c:s.cancelada});
+    else if(s.user_id===uid) out.push({s,idx,u:{uid,turno:s.turno||'dia'},tipo:'activa',c:null});
+  });
+  return out;
+}
+function medRenderAsig(uid,iso){
+  const el=document.getElementById('med-asig');if(!el)return;
+  _medCanc=[];
+  const esc=v=>(typeof escHtml==='function'?escHtml(v):String(v==null?'':v));
+  const TN={dia:'Día',noche:'Noche',guardia:'24 h',h6m:'6h Mañana',h6t:'6h Tarde',cx:'CE Completa',cxam:'CE Mañana',cxpm:'CE Tarde'};
+  const dist=(APP.dist||{})[iso];
+  const lst=medSalasDelDia(uid,iso);
+  const turnosAg=[..._medT].filter(t=>t!=='no');
+  let h=`<div style="font-family:var(--mono);font-size:9px;color:#1a5cbf;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Asignación de salas ese día · verificación</div>`;
+  if(!dist){
+    h+=`<div style="font-size:11px;color:#8aa8c0;">No hay distribución de salas registrada para este día.</div>`;
+  } else if(!lst.length){
+    h+=`<div style="font-size:11px;color:#4e6c8a;">Sin sala asignada en la distribución.</div>`;
+    const enSala=turnosAg.filter(t=>!['cx','cxam','cxpm'].includes(t));
+    if(enSala.length) h+=`<div style="font-size:11px;color:#b45309;margin-top:3px;">⚠ La agenda tiene turno ${enSala.map(t=>TN[t]||t).join(' + ')} pero no aparece en la distribución de salas.</div>`;
+  }
+  lst.forEach((it,k)=>{
+    const lbl=(typeof salaLabel==='function'?salaLabel(it.s):'Sala');
+    const tAs=it.u.turno||'dia';
+    let estado='<span style="color:#0a6a40;font-weight:600;">Activa</span>';
+    if(it.tipo==='completa') estado='<span style="color:#c0392b;font-weight:600;">Cancelada — jornada completa</span>';
+    if(it.tipo==='parcial') estado=`<span style="color:#b45309;font-weight:600;">Media jornada ${it.c.alcance==='am'?'AM':'PM'} cancelada</span>`;
+    h+=`<div style="border:1px solid ${it.tipo==='activa'?'#c8d4e0':(it.tipo==='completa'?'#e8b0b0':'#f2c98a')};background:${it.tipo==='activa'?'#f8fafc':(it.tipo==='completa'?'#fdf3f3':'#fffaf0')};border-radius:4px;padding:8px 10px;margin-bottom:6px;">`;
+    h+=`<div style="font-size:12px;color:#0d1f35;"><b>${esc(lbl)}</b> · turno asignado: <b>${TN[tAs]||tAs}</b> · ${estado}</div>`;
+    if(it.c){
+      const mot=(typeof salaCancMotivoTxt==='function'?salaCancMotivoTxt(it.c,true):'')+(it.c.detalle?' · '+esc(it.c.detalle):'');
+      const compD=(typeof salaCancCompTxt==='function'?salaCancCompTxt(it.c):'');
+      h+=`<div style="font-size:11px;color:#4e6c8a;margin-top:2px;">Motivo: ${mot||'—'}</div>`;
+      h+=`<div style="font-size:11px;color:#4e6c8a;">En la distribución: ${compD?esc(compD):'Sin compensación'}</div>`;
+    }
+    // Doble verificacion agenda vs asignacion
+    if(!turnosAg.length) h+=`<div style="font-size:11px;color:#b45309;margin-top:3px;">⚠ Asignado en sala pero la agenda de este día no tiene turno: no suma horas.</div>`;
+    else if(!turnosAg.includes(tAs)&&!(tAs==='dia'&&turnosAg.includes('guardia'))) h+=`<div style="font-size:11px;color:#b45309;margin-top:3px;">⚠ Turno en agenda (${turnosAg.map(t=>TN[t]||t).join(' + ')}) distinto al asignado en sala (${TN[tAs]||tAs}).</div>`;
+    // Ajuste de horas de la cancelacion
+    if(it.c&&typeof salaHorasEfectivas==='function'){
+      const e=salaHorasEfectivas(it.c,it.u);
+      if(e.cancel){
+        const aj=it.u.canc_ajuste||{};
+        const defModo=e.compensa?'compensada':'descontar';
+        const modo=aj.modo||defModo;
+        const hDesc=aj.modo==='descontar'?(aj.horas??e.cancel):e.cancel;
+        const comp=aj.comp||(it.c.comp&&it.c.comp!=='ninguna'?it.c.comp:'consulta');
+        const det=aj.modo==='compensada'?(aj.comp_det||''):(it.c.comp_det||'');
+        const n=_medCanc.length;
+        _medCanc.push({sid:it.s.id,idx:it.idx,tipo:it.tipo,horas:e.cancel,orig:JSON.stringify(aj.modo?aj:null)});
+        if(APP.canEdit){
+          const opt=Object.entries(SALA_CANC_COMP).filter(([k])=>k!=='ninguna').map(([k,v])=>`<option value="${k}"${k===comp?' selected':''}>${v}</option>`).join('');
+          h+=`<div style="margin-top:7px;padding-top:7px;border-top:1px dashed #d8c0a0;">
+            <div style="font-size:11px;font-weight:600;color:#0d1f35;margin-bottom:4px;">Horas canceladas (${e.cancel} h) — ¿cómo se cuentan para este anestesiólogo?</div>
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#0d1f35;margin:2px 0;cursor:pointer;"><input type="radio" name="medcanc-${n}" value="descontar"${modo==='descontar'?' checked':''} onchange="medCancUI(${n})"> Descontar
+              <input type="number" id="medcanc-h-${n}" min="0" max="24" value="${hDesc}" style="width:52px;padding:2px 5px;border:1px solid #c8d4e0;border-radius:3px;font-size:11px;background:#fff;color:#0d1f35;" oninput="medCancUI(${n})"> h (sin reposición)</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#0d1f35;margin:2px 0;cursor:pointer;"><input type="radio" name="medcanc-${n}" value="sumar"${modo==='sumar'?' checked':''} onchange="medCancUI(${n})"> Sumar las horas (no descontar)</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#0d1f35;margin:2px 0;cursor:pointer;"><input type="radio" name="medcanc-${n}" value="compensada"${modo==='compensada'?' checked':''} onchange="medCancUI(${n})"> Compensada en otro servicio</label>
+            <div id="medcanc-comp-${n}" style="display:${modo==='compensada'?'flex':'none'};gap:6px;margin:3px 0 0 20px;flex-wrap:wrap;">
+              <select id="medcanc-c-${n}" style="padding:3px 6px;border:1px solid #c8d4e0;border-radius:3px;font-size:11px;background:#fff;color:#0d1f35;">${opt}</select>
+              <input type="text" id="medcanc-d-${n}" value="${esc(det)}" placeholder="Servicio / detalle de la compensación" style="flex:1;min-width:140px;padding:3px 6px;border:1px solid #c8d4e0;border-radius:3px;font-size:11px;background:#fff;color:#0d1f35;">
+            </div>
+            <div id="medcanc-ef-${n}" style="font-size:11px;font-weight:600;margin-top:4px;"></div>
+            ${aj.modo?`<div style="font-size:10px;color:#8aa8c0;margin-top:2px;">Ajuste manual guardado${aj.fecha?' el '+esc(String(aj.fecha).slice(0,10)):''}. El registro original de la cancelación se conserva para estadísticas.</div>`:''}
+          </div>`;
+        }
+      }
+    }
+    h+=`</div>`;
+  });
+  el.innerHTML=h;
+  _medCanc.forEach((_,n)=>medCancUI(n));
+}
+function medCancUI(n){
+  const m=document.querySelector(`input[name="medcanc-${n}"]:checked`)?.value||'descontar';
+  const box=document.getElementById('medcanc-comp-'+n);if(box)box.style.display=m==='compensada'?'flex':'none';
+  const ef=document.getElementById('medcanc-ef-'+n);if(!ef)return;
+  const hD=parseInt(document.getElementById('medcanc-h-'+n)?.value)||0;
+  ef.innerHTML=m==='descontar'?`<span style="color:#c0392b;">Efecto: −${hD} h en el total del anestesiólogo (día en rojo)</span>`
+    :m==='sumar'?`<span style="color:#0a6a40;">Efecto: las horas del turno se suman completas</span>`
+    :`<span style="color:#b45309;">Efecto: horas conservadas por compensación</span>`;
+}
+async function medGuardarAjustesCanc(uid,iso){
+  if(!APP.canEdit||!_medCanc.length) return {ok:true};
+  const nuevos=_medCanc.map((c,n)=>{
+    const modo=document.querySelector(`input[name="medcanc-${n}"]:checked`)?.value||'descontar';
+    const aj={modo};
+    if(modo==='descontar') aj.horas=Math.max(0,Math.min(24,parseInt(document.getElementById('medcanc-h-'+n)?.value)||0));
+    if(modo==='compensada'){aj.comp=document.getElementById('medcanc-c-'+n)?.value||'otra';aj.comp_det=(document.getElementById('medcanc-d-'+n)?.value||'').trim();}
+    return {c,aj};
+  });
+  // Releer la distribucion fresca para no pisar cambios hechos en otra sesion
+  await cargarDistribucion(iso);
+  const dist=APP.dist[iso];
+  if(!dist||!dist.id) return {ok:false,msg:'No se encontró la distribución del día'};
+  const salas=dist.salas||[];
+  let cambios=0;
+  nuevos.forEach(({c,aj})=>{
+    const s=salas.find(x=>x.id&&x.id===c.sid)||salas[c.idx];if(!s)return;
+    const u=c.tipo==='completa'?(s.cancelada?.users||[]).find(x=>x.uid===uid):(s.users||[]).find(x=>x.uid===uid);
+    if(!u)return;
+    const prev=u.canc_ajuste?JSON.stringify({modo:u.canc_ajuste.modo,horas:u.canc_ajuste.horas,comp:u.canc_ajuste.comp,comp_det:u.canc_ajuste.comp_det}):'';
+    const nxt=JSON.stringify({modo:aj.modo,horas:aj.horas,comp:aj.comp,comp_det:aj.comp_det});
+    if(prev===nxt) return;
+    u.canc_ajuste={...aj,por:APP.user.id,fecha:new Date().toISOString()};
+    cambios++;
+  });
+  if(!cambios) return {ok:true};
+  const res=await dbWrite('PATCH','distribuciones?id=eq.'+dist.id,{asignaciones:salas});
+  if(res.error) return {ok:false,msg:res.error.message};
+  APP.dist[iso]={...dist,salas};
+  return {ok:true,cambios};
 }
 
 function medTogT(t){
@@ -3528,6 +3664,9 @@ async function medGuardar(){
   }
   if(btn){btn.disabled=false;btn.textContent='Guardar';}
   if(res.error){toast('Error: '+res.error.message,'error');return;}
+  // Ajustes de horas de salas canceladas (solo administrador)
+  const rAj=await medGuardarAjustesCanc(uid,iso);
+  if(!rAj.ok) toast('Agenda guardada, pero el ajuste de la sala cancelada no se guardó: '+rAj.msg,'error');
   // Actualizar estado local
   const savedId=res.data?.id||ex?.id;
   APP.disp[key]={id:savedId,turnos,observaciones:obs,extras:_medExtras};
@@ -3563,8 +3702,16 @@ function cancDia(uid,iso){
     const add=(c,u,parcial)=>{
       const e=salaHorasEfectivas(c,u);
       if(!e.cancel) return;
-      if(e.compensa) r.compensadas+=e.cancel; else r.perdidas+=e.cancel;
-      r.items.push({sala:(typeof salaLabel==='function'?salaLabel(s):'Sala'),alcance:parcial?(c.alcance==='am'?'Media jornada AM':'Media jornada PM'):'Jornada completa',horas:e.cancel,compensa:e.compensa,motivo:(c.motivo||c.detalle||'')});
+      const aj=u.canc_ajuste;
+      let modo=e.compensa?'compensada':'descontar', hDesc=e.compensa?0:e.cancel;
+      if(aj&&aj.modo){
+        modo=aj.modo;
+        hDesc=modo==='descontar'?Math.max(0,Math.min(24,aj.horas??e.cancel)):0;
+      }
+      if(modo==='descontar') r.perdidas+=hDesc;
+      else if(modo==='compensada') r.compensadas+=e.cancel;
+      else r.sumadas=(r.sumadas||0)+e.cancel;
+      r.items.push({sala:(typeof salaLabel==='function'?salaLabel(s):'Sala'),alcance:parcial?(c.alcance==='am'?'Media jornada AM':'Media jornada PM'):'Jornada completa',horas:e.cancel,hDesc,modo,ajustado:!!(aj&&aj.modo),compensa:modo==='compensada',motivo:(c.motivo||c.detalle||''),comp:(aj&&aj.modo==='compensada')?(SALA_CANC_COMP[aj.comp]||aj.comp||'')+(aj.comp_det?' — '+aj.comp_det:''):(typeof salaCancCompTxt==='function'?salaCancCompTxt(c):'')});
     };
     if(s.cancelada){const u=(s.cancelada.users||[]).find(x=>x.uid===uid);if(u)add(s.cancelada,u,false);}
     if(s.canc_parcial){const u=(s.users||[]).find(x=>x.uid===uid);if(u)add(s.canc_parcial,u,true);}
@@ -3572,11 +3719,12 @@ function cancDia(uid,iso){
   return r;
 }
 function cancDiaTitle(cd){
-  return cd.items.map(i=>`${i.sala} cancelada (${i.alcance}, ${i.horas} h) — ${i.compensa?'con reposicion':'SIN reposicion: se descuentan'}${i.motivo?' · '+i.motivo:''}`).join('\n');
+  return cd.items.map(i=>`${i.sala} cancelada (${i.alcance}, ${i.horas} h) — ${i.modo==='descontar'?'SIN reposicion: se descuentan '+i.hDesc+' h':i.modo==='sumar'?'horas sumadas por el administrador':'con reposicion'}${i.comp?' · '+i.comp:''}${i.motivo?' · '+i.motivo:''}${i.ajustado?' (ajuste manual)':''}`).join('\n');
 }
 function chipCancCal(cd){
   if(cd.perdidas>0) return `<div style="display:flex;justify-content:center;margin-top:1px;"><span style="background:#c0392b;color:#fff;font-size:7px;font-weight:700;padding:1px 3px;border-radius:2px;">CANC −${cd.perdidas}h</span></div>`;
   if(cd.compensadas>0) return `<div style="display:flex;justify-content:center;margin-top:1px;"><span style="background:#d97706;color:#fff;font-size:7px;font-weight:700;padding:1px 3px;border-radius:2px;">CANC repuesta</span></div>`;
+  if(cd.sumadas>0) return `<div style="display:flex;justify-content:center;margin-top:1px;"><span style="background:#64748b;color:#fff;font-size:7px;font-weight:700;padding:1px 3px;border-radius:2px;">CANC sumada</span></div>`;
   return '';
 }
 function dpTieneExtras(dp){return !!(dp&&dp.extras&&dp.extras.some(ex=>(ex.horas||0)>0));}
