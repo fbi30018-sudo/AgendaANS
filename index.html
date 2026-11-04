@@ -90,6 +90,12 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
 .field input:focus,.field select:focus{border-color:var(--accent2);box-shadow:0 0 0 2px rgba(26,92,191,.15);}
 .field input::placeholder{color:var(--ink3);}
 .field select option{background:var(--bg2);}
+.field textarea.obs-ta{
+  width:100%;box-sizing:border-box;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--r);color:var(--ink);font-family:var(--sans);font-size:13px;line-height:1.4;outline:none;
+  min-height:44px;max-height:320px;resize:vertical;field-sizing:content;white-space:pre-wrap;
+}
+.field textarea.obs-ta:focus{border-color:var(--accent2);box-shadow:0 0 0 2px rgba(26,92,191,.15);}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .btn-primary{
   width:100%;padding:11px;background:var(--accent);color:#fff;border:none;
@@ -1579,7 +1585,7 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
       </div>
       <div id="md-extras" style="margin-top:6px;display:flex;flex-direction:column;gap:3px;"></div>
     </div>
-    <div class="field" style="margin-top:10px;"><label>Observaciones (opcional)</label><input type="text" id="md-obs" placeholder="Ej: Solo hasta las 12:00..."></div>
+    <div class="field" style="margin-top:10px;"><label>Observaciones (opcional)</label><textarea id="md-obs" class="obs-ta" rows="2" placeholder="Ej: Solo hasta las 12:00..."></textarea></div>
     <div class="modal-actions">
       <button class="btn dang sm" onclick="dispLimpiar()">Limpiar</button>
       <button class="btn sm" onclick="dispBorrarDia()" style="color:#7a0000;border-color:#c0392b;background:#fff5f5;" title="Elimina el registro dejando el día en blanco">🗑 Borrar día</button>
@@ -1752,7 +1758,7 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
       </div>
       <div id="med-extras" style="margin-top:6px;display:flex;flex-direction:column;gap:3px;"></div>
     </div>
-    <div class="field" style="margin-top:10px;"><label>Observaciones</label><input type="text" id="med-obs" placeholder="Ej: Solo hasta las 12:00..."></div>
+    <div class="field" style="margin-top:10px;"><label>Observaciones</label><textarea id="med-obs" class="obs-ta" rows="2" placeholder="Ej: Solo hasta las 12:00..."></textarea></div>
     <input type="hidden" id="med-uid">
     <input type="hidden" id="med-iso">
     <div class="modal-actions">
@@ -2110,6 +2116,12 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.25.0',n:'Observaciones ampliables y extras sin turno',f:'2026-11-04',cambios:[
+    'El campo Observaciones del dia (editor del administrador y Mi Disponibilidad) ahora es un recuadro de varias lineas que crece con el texto y se puede agrandar arrastrando la esquina.',
+    'En el cuadro consolidado, al pasar el cursor sobre un dia se ve la observacion completa.',
+    'Las horas extras se contabilizan aunque ese dia no tenga turno asignado: suman en la facturacion estimada, en el PDF, en el Excel (resumen, detalle y horas por medico) y en el orden del cuadro.',
+    'Un dia con solo horas extras se muestra en el calendario con un chip morado EXT (+horas y valor) y en el cuadro con un chip +horas.'
+  ]},
   {v:'2.24.0',n:'Cancelar media jornada y registrar compensacion',f:'2026-10-30',cambios:[
     'Nuevo: al cancelar una sala (boton ⊘) se elige que se cancela: jornada completa (12 h), media jornada AM (07–13) o media jornada PM (13–19).',
     'Con media jornada la sala sigue activa con sus anestesiologos: la tarjeta muestra una franja ambar con la mitad cancelada, el motivo y la compensacion, y el texto del programa marca la sala como "SOLO AM" o "SOLO PM".',
@@ -3043,8 +3055,8 @@ function renderCuadro(){
     let h=0;
     dias.forEach(({iso})=>{
       const dp=getDisp(doc.id,iso);
-      if(!dp||!dp.turnos||dp.turnos.includes('no')) return;
-      dp.turnos.forEach(t=>{ h+=TURNO_H_C[t]||0; });
+      if(!dp) return;
+      if(dp.turnos&&!dp.turnos.includes('no')) dp.turnos.forEach(t=>{ h+=TURNO_H_C[t]||0; });
       (dp.extras||[]).forEach(ex=>{ h+=ex.horas||0; });
     });
     return h;
@@ -3149,7 +3161,12 @@ function renderCuadro(){
             }
           }
         }
-        r+=`<td style="${bg2}">${lbl}</td>`;
+        if(!lbl&&dpTieneExtras(dp)){
+          const exH=dp.extras.reduce((a,ex)=>a+(ex.horas||0),0);
+          lbl=`<span class="tk" style="background:#7a3a8a;color:#fff;font-size:7px;display:block;line-height:1.3;" title="Horas extras sin turno asignado">+${exH}</span>`;
+          diasT++;
+        }
+        r+=`<td style="${bg2}"${dp&&dp.observaciones?` title="${escObs(dp.observaciones)}"`:''}>${lbl}</td>`;
       });
       r+=`<td style="text-align:center;font-family:var(--mono);font-size:9px;font-weight:700;color:${diasT>0?'#0a6a40':'#9ab0c8'};">${diasT||'—'}</td>`;
       r+='</tr>';
@@ -3335,6 +3352,10 @@ function mdmRenderGrid(){
       }
       // Observacion
       if(dp.observaciones) dots+=`<div style="font-size:7px;color:#8aa8c0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${dp.observaciones.slice(0,14)}</div>`;
+    }else if(dpTieneExtras(dp)){
+      bg='background:#f6effa;border-color:#7a3a8a;border-width:2px;';
+      dots=chipExtrasCal(dp,iso,dt);
+      if(dp.observaciones) dots+=`<div style="font-size:7px;color:#8aa8c0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">${dp.observaciones.slice(0,14)}</div>`;
     }else if(dp&&dp.turnos&&dp.turnos.includes('no')){
       bg='background:#fdf0f0;border-color:#e8b0b0;';
       dots='<div class="dot nd" style="font-size:8px;">No</div>';
@@ -3504,6 +3525,15 @@ async function medGuardar(){
 }
 
 
+function escObs(t){return String(t||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function chipExtrasCal(dp,iso,dt){
+  const fd=esFest(iso)||dt.getDay()===0;let h=0,p=0;
+  (dp.extras||[]).forEach(ex=>{const x=ex.horas||0;if(!x)return;const ini=parseInt((ex.inicio||'07:00').split(':')[0]);h+=x;p+=x*(fd||ini<7||ini>=19?130000:120000);});
+  const f=n=>new Intl.NumberFormat('es-CO',{maximumFractionDigits:0}).format(n);
+  return `<div style="display:flex;justify-content:center;"><span style="background:#7a3a8a;color:#fff;font-size:7px;font-weight:700;padding:1px 3px;border-radius:2px;">EXT</span></div><div style="font-size:7px;font-family:var(--mono);color:#7a3a8a;font-weight:700;text-align:center;margin-top:1px;">+${h}h·$${f(p/1000)}k</div>`;
+}
+function dpTieneExtras(dp){return !!(dp&&dp.extras&&dp.extras.some(ex=>(ex.horas||0)>0));}
+function dpCuentaHoras(dp){return !!(dp&&((dp.turnos&&dp.turnos.length&&!dp.turnos.includes('no'))||dpTieneExtras(dp)));}
 function calcFacturacion(uid, meses, anio=cuadroAnio){
   // TARIFAS:
   // Dias convencionales (lun-sab): diurno $120.000/h, nocturno $130.000/h
@@ -3517,10 +3547,10 @@ function calcFacturacion(uid, meses, anio=cuadroAnio){
       const dt=new Date(anio,m,d);
       const iso=toISO(dt);
       const dp=getDisp(uid,iso);
-      if(!dp||!dp.turnos||!dp.turnos.length||dp.turnos.includes('no')) continue;
+      if(!dpCuentaHoras(dp)) continue;
       // festivo = festivo oficial O domingo (NO sábado)
       const esFestODom = esFest(iso)||dt.getDay()===0;
-      dp.turnos.forEach(t=>{
+      (dp.turnos||[]).forEach(t=>{
         if(t==='no') return;
         if(t==='guardia'){
           // 24h: 12h diurnas + 12h nocturnas
@@ -3680,6 +3710,10 @@ function renderDispMesGrid(y,m,editable){
           dots+=`<div style="font-size:7px;font-family:var(--mono);color:#7a3a8a;font-weight:700;text-align:center;margin-top:1px;">+${extH}h·$${fmtE(extP/1000)}k</div>`;
         }
       }
+    }else if(dpTieneExtras(dp)){
+      bg='background:#f6effa;border-color:#7a3a8a;border-width:2px;';
+      dots+=chipExtrasCal(dp,iso,dt);
+      if(dp.observaciones)dots+=`<div class="dot nd" style="font-size:7px;">${dp.observaciones.slice(0,12)}</div>`;
     }else if(dp&&dp.turnos&&dp.turnos.includes('no')){bg='background:#fdf0f0;border-color:#e8b0b0;';dots+=`<div class="dot nd">No</div>`;}
     // Dias ya pasados: solo el administrador puede editarlos (jornada cumplida)
     const esPasado=iso<hoy;
@@ -3723,8 +3757,8 @@ function exportarExcel(){
         const dt=new Date(anio,m,d);
         const iso=toISO(dt);
         const dp=getDisp(doc.id,iso);
-        if(!dp||!dp.turnos||!dp.turnos.length||dp.turnos.includes('no')) continue;
-        const ts=dp.turnos;
+        if(!dpCuentaHoras(dp)) continue;
+        const ts=dp.turnos||[];
         const esDomFest=esFest(iso)||dt.getDay()===0;
         const esSab=dt.getDay()===6;
         let hDia=0,pDia=0;
@@ -3783,8 +3817,8 @@ function exportarExcel(){
       const dt=new Date(anio,m,d);
       const iso=toISO(dt);
       const dp=getDisp(doc.id,iso);
-      if(!dp||!dp.turnos||!dp.turnos.length||dp.turnos.includes('no')) return '';
-      const ts=dp.turnos;
+      if(!dpCuentaHoras(dp)) return '';
+      const ts=dp.turnos||[];
       const esDomFest=esFest(iso)||dt.getDay()===0;
       let hDia=0,pDia=0,lbl=[];
       ts.forEach(t=>{
@@ -3926,10 +3960,10 @@ function exportarExcel(){
       const dt=new Date(anio,m,d2);
       const iso=toISO(dt);
       const dp=getDisp(doc.id,iso);
-      if(!dp||!dp.turnos||!dp.turnos.length||dp.turnos.includes('no')) continue;
+      if(!dpCuentaHoras(dp)) continue;
       const esDomFest=esFest(iso)||dt.getDay()===0;
       let hDia=0;
-      dp.turnos.forEach(t=>{
+      (dp.turnos||[]).forEach(t=>{
         const h=TURNO_H[t]||0;if(!h)return;
         hDia+=h;
         if(esDomFest){hFest+=h;pTurnos+=h*130000;}
@@ -3987,10 +4021,10 @@ function calcFacturacion(uid, meses, anio=cuadroAnio){
       const dt=new Date(anio,m,d);
       const iso=toISO(dt);
       const dp=getDisp(uid,iso);
-      if(!dp||!dp.turnos||!dp.turnos.length||dp.turnos.includes('no')) continue;
+      if(!dpCuentaHoras(dp)) continue;
       // festivo = festivo oficial O domingo (NO sábado)
       const esFestODom = esFest(iso)||dt.getDay()===0;
-      dp.turnos.forEach(t=>{
+      (dp.turnos||[]).forEach(t=>{
         if(t==='no') return;
         if(t==='guardia'){
           // 24h: 12h diurnas + 12h nocturnas
@@ -4119,7 +4153,7 @@ function cuadroDocsConTurno(mes,anio=cuadroAnio){
     for(let d=1;d<=nDias;d++){
       const iso=toISO(new Date(anio,mes,d));
       const dp=getDisp(doc.id,iso);
-      if(dp&&dp.turnos&&dp.turnos.length&&!dp.turnos.includes('no')) return true;
+      if(dpCuentaHoras(dp)) return true;
     }
     return false;
   });
