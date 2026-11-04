@@ -2136,7 +2136,8 @@ const CHANGELOG=[
   {v:'2.32.0',n:'Hospitalario de interconsultas: consulta externa como horas extras',f:'2026-11-04',cambios:[
     'En el perfil "Hospitalario de interconsultas (contrato OPS)" las horas se separan en dos categorías: interconsultas (jornada de contrato, lunes a viernes) y consulta externa (horas extras).',
     'Son consulta externa / horas extras: todo turno de sábado, domingo o festivo, y los turnos de CE (CE Completa, CE Mañana, CE Tarde) entre semana. No suman a sus horas ni días de interconsultas.',
-    'Se ven en el cuadro (borde morado + detalle al pasar el cursor), en su calendario ("Xh interconsulta · +Yh CE extra") y en el Excel (columna Horas Extras del resumen y del detalle mensual).'
+    'Se ven en el cuadro (borde morado + detalle al pasar el cursor), en su calendario ("Xh interconsulta · +Yh CE extra") y en el Excel (columna Horas Extras del resumen y del detalle mensual).',
+    'Ajuste manual: cuando el día tiene más de 6 h, en el editor del día del hospitalario el administrador puede indicar cuántas de esas horas NO pertenecen a su contrato (pasan a horas extras). "Restablecer automático" vuelve a la regla por defecto.'
   ]},
   {v:'2.31.0',n:'Dos perfiles de hospitalario',f:'2026-11-04',cambios:[
     'Perfil "Hospitalario de interconsultas (contrato OPS)" — p. ej. Miguel González: de lunes a viernes no festivos sus horas quedan emparejadas por defecto con Fabián Guerrero y son su jornada de contrato ordinario.',
@@ -3845,6 +3846,8 @@ function esHosp(doc){return !!doc&&esHospRol(doc.rol);}
 // v2.32.0 — Hospitalario de interconsultas: separa horas de contrato (interconsulta L-V)
 // de consulta externa (sab/dom/festivo, o turnos CE entre semana) = horas extras.
 const HOSP_CE_T=['cx','cxam','cxpm'];
+// Ajuste manual por dia: distribuciones.cfg.contrato[hospUid] = {ext: horas fuera de contrato}
+function hospCeManual(uid,iso){const c=APP.dist&&APP.dist[iso]&&APP.dist[iso].cfg&&APP.dist[iso].cfg.contrato;return (c&&c[uid]&&c[uid].ext!=null)?c[uid].ext:null;}
 function hospSplit(doc,iso){
   const dp=doc?getDisp(doc.id,iso):null;
   let contrato=0,ce=0;
@@ -3852,7 +3855,17 @@ function hospSplit(doc,iso){
     const h=HOSP_TURNO_H[t]||0;
     if(!esDiaHabil(iso)||HOSP_CE_T.includes(t)) ce+=h; else contrato+=h;
   });
-  return {contrato,ce};
+  const man=doc?hospCeManual(doc.id,iso):null;
+  if(man!=null){const tot=contrato+ce;ce=Math.max(0,Math.min(tot,man));contrato=tot-ce;return {contrato,ce,manual:true};}
+  return {contrato,ce,manual:false};
+}
+async function cambiarCeHosp(iso,uid,val){
+  const ok=await guardarCfgDia(iso,cfg=>{
+    const c={...(cfg.contrato||{})};
+    if(val===null||val==='') delete c[uid]; else c[uid]={ext:Math.max(0,parseInt(val)||0)};
+    cfg.contrato=c;
+  });
+  if(ok){toast(val===null?'Reparto automático restablecido':'Horas fuera de contrato actualizadas','success');refrescarTrasPareja();}
 }
 function esHospIC(doc){return !!doc&&doc.rol==='interconsulta';}
 function nomDoc(uid){const d=getP(uid);return d?(d.nombre+' '+d.apellidos):'—';}
@@ -4019,6 +4032,18 @@ function medRenderPareja(uid,iso){
     h+=tit('Emparejamiento — consulta / interconsulta');
     h+=`<select onchange="cambiarPareja('${iso}','${uid}',this.value)" style="width:100%;font-size:12px;padding:5px 8px;background:#fff;color:#0d1f35;border:1px solid #a5d8e6;border-radius:4px;">${opcionesPareja(uid,iso)}</select>`;
     h+=`<div style="font-family:var(--mono);font-size:9px;color:#4e6c8a;margin-top:4px;">${hh?`Sus ${hh} h de este día (agenda guardada) se suman al anestesiólogo emparejado.`:'Sin horas guardadas este día: guarde primero su turno.'}</div>`;
+    if(esHospIC(doc)){
+      const sp=hospSplit(doc,iso),tot=sp.contrato+sp.ce;
+      if(tot>6||sp.manual){
+        h+=`<div style="margin-top:8px;padding:8px 10px;background:#faf5ff;border:1px solid #d8b4fe;border-radius:4px;">
+          <div style="font-family:var(--mono);font-size:9px;color:#7e22ce;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Contrato de interconsulta${sp.manual?' · ajuste manual':' · automático'}</div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;">Horas fuera de contrato (horas extras)
+            <input type="number" min="0" max="${tot}" step="1" value="${sp.ce}" onchange="cambiarCeHosp('${iso}','${uid}',this.value)" style="width:56px;font-size:12px;padding:3px 6px;background:#fff;color:#0d1f35;border:1px solid #d8b4fe;border-radius:3px;"> de ${tot} h</label>
+          <div style="font-size:11px;margin-top:6px;color:#0d1f35;">Interconsulta (contrato): <b>${sp.contrato} h</b> · Horas extras: <b style="color:#7e22ce;">${sp.ce} h</b></div>
+          ${sp.manual?`<button class="btn sm" onclick="cambiarCeHosp('${iso}','${uid}',null)" style="margin-top:6px;font-size:10px;padding:2px 8px;">Restablecer automático</button>`:''}
+        </div>`;
+      }
+    }
   }else{
     const hs=hospsAll().filter(x=>hospHoras(x.id,iso)>0||hospPareja(x.id,iso)===uid);
     h+=tit('Hospitalario que lo acompaña');
@@ -6550,6 +6575,7 @@ async function guardarDist(){
   const ex=APP.dist[distDate];
   if(ex&&ex.cfg&&ex.cfg.parejas) cfg.parejas=ex.cfg.parejas; // v2.29.0 — no borrar emparejamientos
   if(ex&&ex.cfg&&ex.cfg.agendas) cfg.agendas=ex.cfg.agendas;  // v2.30.0
+  if(ex&&ex.cfg&&ex.cfg.contrato) cfg.contrato=ex.cfg.contrato; // v2.32.0
   let res;
   if(ex?.id){res=await dbWrite('PATCH','distribuciones?id=eq.'+ex.id,{cfg,asignaciones:salasCur});}
   else{res=await dbWrite('POST','distribuciones',{fecha:distDate,cfg,asignaciones:salasCur,creado_por:APP.user.id});}
