@@ -2133,6 +2133,11 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.32.0',n:'Hospitalario de interconsultas: consulta externa como horas extras',f:'2026-11-04',cambios:[
+    'En el perfil "Hospitalario de interconsultas (contrato OPS)" las horas se separan en dos categorías: interconsultas (jornada de contrato, lunes a viernes) y consulta externa (horas extras).',
+    'Son consulta externa / horas extras: todo turno de sábado, domingo o festivo, y los turnos de CE (CE Completa, CE Mañana, CE Tarde) entre semana. No suman a sus horas ni días de interconsultas.',
+    'Se ven en el cuadro (borde morado + detalle al pasar el cursor), en su calendario ("Xh interconsulta · +Yh CE extra") y en el Excel (columna Horas Extras del resumen y del detalle mensual).'
+  ]},
   {v:'2.31.0',n:'Dos perfiles de hospitalario',f:'2026-11-04',cambios:[
     'Perfil "Hospitalario de interconsultas (contrato OPS)" — p. ej. Miguel González: de lunes a viernes no festivos sus horas quedan emparejadas por defecto con Fabián Guerrero y son su jornada de contrato ordinario.',
     'Las horas de ese perfil en sábado, domingo o festivo (consulta externa) NO cuentan en su jornada de contrato: no suman a sus días/horas en el cuadro, el PDF ni el Excel, y van al anestesiólogo emparejado. En el cuadro la celda se marca con borde morado.',
@@ -3123,7 +3128,7 @@ function renderCuadro(){
       const dp=getDisp(doc.id,iso);
       hospExtras(doc.id,iso).forEach(ex=>{ h+=ex.horas; });
       if(!dp) return;
-      if(fueraContrato(doc,iso)) return;
+      if(esHospIC(doc)){ h+=hospSplit(doc,iso).contrato; return; }
       if(dp.turnos&&!dp.turnos.includes('no')) dp.turnos.forEach(t=>{ h+=TURNO_H_C[t]||0; });
       (dp.extras||[]).forEach(ex=>{ h+=ex.horas||0; });
     });
@@ -3256,7 +3261,11 @@ function renderCuadro(){
             ttl=(ttl?ttl+'\n':'')+hospAcompTitle(haC);
           }
         }
-        if(fueraContrato(doc,iso)&&lbl){diasT=dT0;bg2+='box-shadow:inset 0 0 0 2px #a855f7;';ttl=(ttl?ttl+'\n':'')+'Fuera del contrato ordinario (sábado/domingo/festivo): no suma a su jornada; sus horas van al anestesiólogo emparejado.';}
+        if(esHospIC(doc)&&lbl){
+          const sp=hospSplit(doc,iso);
+          if(!sp.contrato) diasT=dT0;
+          if(sp.ce){bg2+='box-shadow:inset 0 0 0 2px #a855f7;';ttl=(ttl?ttl+'\n':'')+`Consulta externa: ${sp.ce} h — horas extras (no suman a sus interconsultas)${sp.contrato?' · Interconsulta: '+sp.contrato+' h':''}`;}
+        }
         r+=`<td style="${bg2}"${ttl?` title="${escObs(ttl)}"`:''}>${lbl}</td>`;
       });
       r+=`<td style="text-align:center;font-family:var(--mono);font-size:9px;font-weight:700;color:${diasT>0?'#0a6a40':'#9ab0c8'};">${diasT||'—'}</td>`;
@@ -3279,7 +3288,7 @@ function renderCuadro(){
     const docsIME=imes.filter(d=>d.empresa==='IME'||d.rol==='ime');
     if(docsInterApoyo.length){
       const interOrd=[...docsInterApoyo].sort((a,b)=>contarHorasMes(b)-contarHorasMes(a));
-      h+=`<tr><td colspan="${nDias+4}" style="background:#f3e8ff;padding:3px 8px 3px 16px;font-size:9px;font-weight:700;color:#6b21a8;text-transform:uppercase;border-bottom:1px solid #d8b4fe;position:sticky;left:0;">↳ Hospitalarios — interconsultas y consulta externa — ${interOrd.length} <span style="font-weight:400;font-size:8px;opacity:.7;">(sin tarifa ANS · borde morado = fuera de contrato ordinario)</span></td></tr>`;
+      h+=`<tr><td colspan="${nDias+4}" style="background:#f3e8ff;padding:3px 8px 3px 16px;font-size:9px;font-weight:700;color:#6b21a8;text-transform:uppercase;border-bottom:1px solid #d8b4fe;position:sticky;left:0;">↳ Hospitalarios — interconsultas y consulta externa — ${interOrd.length} <span style="font-weight:400;font-size:8px;opacity:.7;">(sin tarifa ANS · borde morado = consulta externa, horas extras)</span></td></tr>`;
       interOrd.forEach(doc=>{ h+=renderDocRow(doc,emp==='SEDAR'?'sedar':'col',doc.rol==='interconsulta'?'IC':'HOSP'); });
     }
     if(docsIME.length){
@@ -3833,7 +3842,19 @@ const HOSP_TURNO_TXT={dia:'Día 12h',cx:'CE 12h',h6m:'6h Mañana',h6t:'6h Tarde'
 function esHospRol(r){return r==='interconsulta'||r==='hospitalario';}
 function esHosp(doc){return !!doc&&esHospRol(doc.rol);}
 // Hospitalario de interconsultas con contrato: sus horas de sab/dom/festivo no son jornada ordinaria
-function fueraContrato(doc,iso){return !!doc&&doc.rol==='interconsulta'&&!esDiaHabil(iso);}
+// v2.32.0 — Hospitalario de interconsultas: separa horas de contrato (interconsulta L-V)
+// de consulta externa (sab/dom/festivo, o turnos CE entre semana) = horas extras.
+const HOSP_CE_T=['cx','cxam','cxpm'];
+function hospSplit(doc,iso){
+  const dp=doc?getDisp(doc.id,iso):null;
+  let contrato=0,ce=0;
+  (((dp&&dp.turnos)||[]).filter(t=>t!=='no')).forEach(t=>{
+    const h=HOSP_TURNO_H[t]||0;
+    if(!esDiaHabil(iso)||HOSP_CE_T.includes(t)) ce+=h; else contrato+=h;
+  });
+  return {contrato,ce};
+}
+function esHospIC(doc){return !!doc&&doc.rol==='interconsulta';}
 function nomDoc(uid){const d=getP(uid);return d?(d.nombre+' '+d.apellidos):'—';}
 function hospsAll(){return (APP.perfiles||[]).filter(p=>p.activo&&esHospRol(p.rol));}
 function anesParaPareja(){return (APP.perfiles||[]).filter(p=>p.activo&&(p.rol==='anestesiologo'||p.rol==='admin')).sort((x,y)=>(x.nombre+x.apellidos).localeCompare(y.nombre+y.apellidos));}
@@ -4027,11 +4048,12 @@ function dpCuentaHoras(dp){return !!(dp&&((dp.turnos&&dp.turnos.length&&!dp.turn
 function renderDispMesGrid(y,m,editable){
   const uid=APP.user.id,hoy=toISO(new Date());
   const primer=new Date(y,m,1),off=(primer.getDay()+6)%7,nDias=new Date(y,m+1,0).getDate();
-  const {totalHoras:mH,totalPesos:mP}=calcFacturacion(uid,[m],y);
+  const {totalHoras:mH,totalPesos:mP,desglose:mD}=calcFacturacion(uid,[m],y);
   const fmtM=n=>new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:0}).format(n);
+  const icM=esHospIC(getP(uid)),ceM=(mD&&mD.ceExtra)||0;
   let h=`<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
     <div style="font-family:var(--mono);font-size:10px;font-weight:600;color:#1a5cbf;text-transform:uppercase;letter-spacing:.8px;">${MESES[m]} ${y}</div>
-    ${mH>0?`<div style="font-family:var(--mono);font-size:9px;color:#0a6a40;font-weight:600;">${mH}h · ${fmtM(mP)}</div>`:'<div style="font-family:var(--mono);font-size:9px;color:#c8d4e0;">Sin turnos</div>'}
+    ${icM?((mH||ceM)?`<div style="font-family:var(--mono);font-size:9px;color:#0a6a40;font-weight:600;">${mH}h interconsulta${ceM?` · <span style="color:#7e22ce;">+${ceM}h CE extra</span>`:''}</div>`:'<div style="font-family:var(--mono);font-size:9px;color:#c8d4e0;">Sin turnos</div>'):mH>0?`<div style="font-family:var(--mono);font-size:9px;color:#0a6a40;font-weight:600;">${mH}h · ${fmtM(mP)}</div>`:'<div style="font-family:var(--mono);font-size:9px;color:#c8d4e0;">Sin turnos</div>'}
   </div>`;
   h+=`<div class="cal-hdr"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div>`;
   h+=`<div class="cal-grid">`;
@@ -4159,7 +4181,10 @@ function exportarExcel(){
         const addR=cobroSinTurno(cdR,dp);
         if(addR){hDia+=addR;pDia+=addR*(esDomFest?130000:120000);}
         if(cdR.perdidas>0&&ts.some(t=>t!=='no')){hDia-=cdR.perdidas;pDia-=cdR.perdidas*(esDomFest?130000:120000);}
-        if(hDia>0&&!fueraContrato(doc,iso)){mesesH[m]+=hDia;totalDias++;totalH+=hDia;totalP+=pDia;}
+        if(hDia>0){
+          if(esHospIC(doc)){const sp=hospSplit(doc,iso);if(sp.contrato){mesesH[m]+=sp.contrato;totalDias++;totalH+=sp.contrato;}extH+=sp.ce;}
+          else{mesesH[m]+=hDia;totalDias++;totalH+=hDia;totalP+=pDia;}
+        }
       }
     }
     const rolLabel={anestesiologo:'Anestesiólogo',admin:'Admin',ime:'IME',interconsulta:'Hospitalario interconsultas (contrato)',hospitalario:'Hospitalario consulta externa',viewer:'Viewer'}[doc.rol]||doc.rol;
@@ -4168,7 +4193,7 @@ function exportarExcel(){
       doc.empresa||'',
       rolLabel,
       ...mesesH.map(h=>h||''),
-      totalDias,totalH,esInterconsulta?'N/A':extH||''
+      totalDias,totalH,(esInterconsulta&&!esHospIC(doc))?'N/A':(extH||'')
     ]);
   });
   const ws1=XLSX.utils.aoa_to_sheet(rowsRes);
@@ -4217,8 +4242,10 @@ function exportarExcel(){
       const cdT=cancDia(doc.id,iso);
       if(cdT.sumadas>0){const addT=cobroSinTurno(cdT,dp);if(addT){hDia+=addT;pDia+=addT*(esDomFest?130000:120000);}lbl.push('CANC cobrada '+cdT.sumadas+'h');}
       if(cdT.perdidas>0&&ts.some(t=>t!=='no')){hDia-=cdT.perdidas;pDia-=cdT.perdidas*(esDomFest?130000:120000);lbl.push('CANC-'+cdT.perdidas+'h');}
-      if(hDia>0&&!fueraContrato(doc,iso)){totDias++;totH+=hDia;totP+=pDia;}
-      else if(hDia>0) lbl.push('fuera contrato');
+      if(hDia>0){
+        if(esHospIC(doc)){const sp=hospSplit(doc,iso);if(sp.contrato){totDias++;totH+=sp.contrato;}if(sp.ce){totExtH+=sp.ce;lbl.push('CE extra '+sp.ce+'h');}}
+        else{totDias++;totH+=hDia;totP+=pDia;}
+      }
       return lbl.join('/');
     });
     rowsDet.push([doc.nombre+' '+doc.apellidos,doc.empresa||'',...celdas,totDias,totH,totExtH||'']);
@@ -4410,7 +4437,11 @@ function calcFacturacion(uid, meses, anio=cuadroAnio){
       const iso=toISO(dt);
       let dp=getDisp(uid,iso);
       if(!diaCuenta(uid,iso,dp)) continue;
-      if(fueraContrato(getP(uid),iso)) continue; // v2.31.0
+      if(esHospIC(getP(uid))){ // v2.32.0 — solo interconsulta de contrato; la CE va aparte
+        const sp=hospSplit(getP(uid),iso);
+        totalHoras+=sp.contrato; desglose.ceExtra=(desglose.ceExtra||0)+sp.ce;
+        continue;
+      }
       dp=dp||{turnos:[],extras:[]};
       // festivo = festivo oficial O domingo (NO sábado)
       const esFestODom = esFest(iso)||dt.getDay()===0;
