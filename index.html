@@ -2133,6 +2133,9 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.33.0',n:'Desglose de horas de hospitalario en la facturación',f:'2026-11-04',cambios:[
+    'La facturación estimada separa las horas de hospitalario en dos líneas: "Hospitalario de contrato (interconsultas)" con sus horas emparejadas de lunes a viernes, y "Consulta externa con hospitalario" con el número de consultas (consultorios atendidos por hospitalarios), los días y las horas que suman.'
+  ]},
   {v:'2.32.0',n:'Hospitalario de interconsultas: consulta externa como horas extras',f:'2026-11-04',cambios:[
     'En el perfil "Hospitalario de interconsultas (contrato OPS)" las horas se separan en dos categorías: interconsultas (jornada de contrato, lunes a viernes) y consulta externa (horas extras).',
     'Son consulta externa / horas extras: todo turno de sábado, domingo o festivo, y los turnos de CE (CE Completa, CE Mañana, CE Tarde) entre semana. No suman a sus horas ni días de interconsultas.',
@@ -3924,14 +3927,18 @@ function hospExtras(uid,iso){
   const out=[];if(!uid||iso<HOSP_DESDE) return out;
   const ag=agendasDia(uid,iso);
   if(ag){
-    if(ag.extra>0) out.push({horas:ag.extra,inicio:ag.ini,hosp:ag.hs[0].id,nota:agendasNota(ag)});
+    if(ag.extra>0) out.push({horas:ag.extra,inicio:ag.ini,hosp:ag.hs[0].id,tipo:'ce',cons:Math.max(0,ag.n-(ag.atiende?1:0)),nota:agendasNota(ag)});
     return out;
   }
   hospsAll().forEach(h=>{
     if(h.id===uid||hospPareja(h.id,iso)!==uid) return;
+    let primeraCe=true;
     hospTurnos(h.id,iso).forEach(t=>{
       const hh=HOSP_TURNO_H[t]||0;if(!hh) return;
-      out.push({horas:hh,inicio:HOSP_TURNO_INI[t]||'07:00',hosp:h.id,nota:'Hospitalario '+nomDoc(h.id)+' — '+(HOSP_TURNO_TXT[t]||t)});
+      // Contrato de interconsultas: hospitalario con contrato, L-V no festivo, turno que no es de CE
+      const ic=h.rol==='interconsulta'&&esDiaHabil(iso)&&!HOSP_CE_T.includes(t);
+      out.push({horas:hh,inicio:HOSP_TURNO_INI[t]||'07:00',hosp:h.id,tipo:ic?'ic':'ce',cons:(!ic&&primeraCe)?1:0,nota:'Hospitalario '+nomDoc(h.id)+' — '+(HOSP_TURNO_TXT[t]||t)+(ic?' (contrato interconsultas)':' (consulta externa)')});
+      if(!ic) primeraCe=false;
     });
   });
   return out;
@@ -4532,7 +4539,15 @@ function calcFacturacion(uid, meses, anio=cuadroAnio){
       // ── Horas extras ─────────────────────────────────────────
       if(extrasEf(dp,uid,iso).length){
         extrasEf(dp,uid,iso).forEach(ex=>{
-          if(ex.hosp) desglose.hospH=(desglose.hospH||0)+(ex.horas||0);
+          if(ex.hosp){
+            desglose.hospH=(desglose.hospH||0)+(ex.horas||0);
+            if(ex.tipo==='ic'){desglose.hospIC=(desglose.hospIC||0)+(ex.horas||0);const iI=parseInt((ex.inicio||'07:00').split(':')[0]);desglose.hospICp=(desglose.hospICp||0)+(ex.horas||0)*(esFestODom||iI<7||iI>=19?130000:120000);}
+            else{
+              desglose.hospCEh=(desglose.hospCEh||0)+(ex.horas||0);
+              desglose.hospCEn=(desglose.hospCEn||0)+(ex.cons||0);
+              desglose.hospCEdias=desglose.hospCEdias||{};desglose.hospCEdias[iso]=1;
+            }
+          }
           const h=ex.horas||0;
           if(!h) return;
           const iniH=parseInt((ex.inicio||'07:00').split(':')[0]);
@@ -4577,6 +4592,8 @@ function renderFacturacion(uid, meses, containerId, anio=cuadroAnio){
         ${desglose.extDiurno>0?`<div style="font-size:11px;padding-left:10px;"><span style="color:#4e6c8a;">↳ Extra diurna (07-19h):</span> <b>${desglose.extDiurno}h</b> × $120.000/h = <b style="color:#0a6a40;">${fmt(desglose.extDiurno*120000)}</b></div>`:''}
         ${desglose.extNocturno>0?`<div style="font-size:11px;padding-left:10px;"><span style="color:#4e6c8a;">↳ Extra nocturna (≥19h):</span> <b>${desglose.extNocturno}h</b> × $130.000/h = <b style="color:#3030a0;">${fmt(desglose.extNocturno*130000)}</b></div>`:''}
         ${desglose.hospH>0?`<div style="font-size:11px;padding-left:10px;"><span style="color:#0e7490;font-weight:600;">↳ Horas de hospitalario emparejado:</span> <b style="color:#0e7490;">${desglose.hospH}h</b> <span style="color:#8aa8c0;">incluidas en las extras</span></div>`:''}
+        ${desglose.hospIC>0?`<div style="font-size:11px;padding-left:24px;"><span style="color:#4e6c8a;">• Hospitalario de contrato (interconsultas):</span> <b>${desglose.hospIC}h</b> = <b style="color:#0a6a40;">${fmt(desglose.hospICp||0)}</b></div>`:''}
+        ${desglose.hospCEh>0?`<div style="font-size:11px;padding-left:24px;"><span style="color:#4e6c8a;">• Consulta externa con hospitalario:</span> <b>${desglose.hospCEn||0} consulta${(desglose.hospCEn||0)===1?'':'s'}</b> en ${Object.keys(desglose.hospCEdias||{}).length} día${Object.keys(desglose.hospCEdias||{}).length===1?'':'s'} · <b>+${desglose.hospCEh}h</b></div>`:''}
         ${desglose.cobH>0?`<div style="font-size:11px;border-top:1px dashed #c8d4e0;padding-top:5px;margin-top:3px;"><span style="color:#0a7a4a;font-weight:600;">Salas canceladas cobradas (sin reposición):</span> <b style="color:#0a7a4a;">${desglose.cobH}h</b> <span style="color:#8aa8c0;">incluidas en los turnos</span></div>`:''}
         ${desglose.cancH>0?`<div style="font-size:11px;border-top:1px dashed #c8d4e0;padding-top:5px;margin-top:3px;"><span style="color:#c0392b;font-weight:600;">Salas canceladas sin reposición:</span> <b style="color:#c0392b;">−${desglose.cancH}h</b> = <b style="color:#c0392b;">−${fmt(desglose.cancP)}</b></div>`:''}
       </div>
