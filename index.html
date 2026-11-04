@@ -2133,6 +2133,11 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.34.0',n:'Extras solo para pagos anticipados',f:'2026-11-04',cambios:[
+    '"Extras registradas" ahora suma únicamente las horas extras ingresadas a mano (turnos de anestesiólogos pagados por anticipado). Diurnas 07–19 h; nocturnas desde las 19 h.',
+    'Las horas de hospitalario emparejado salen de las extras y tienen su propia sección en la facturación estimada: "Hospitalario de contrato (interconsultas)" y "Consulta externa con hospitalario", cada una con horas y valor. El total del mes no cambia.',
+    'Excel: en "Horas por médico" hay una columna nueva "Horas hospitalario emparejado" y las columnas de extras ya no las incluyen; en el resumen y el detalle mensual la columna "Horas Extras" solo cuenta las extras registradas.'
+  ]},
   {v:'2.33.0',n:'Desglose de horas de hospitalario en la facturación',f:'2026-11-04',cambios:[
     'La facturación estimada separa las horas de hospitalario en dos líneas: "Hospitalario de contrato (interconsultas)" con sus horas emparejadas de lunes a viernes, y "Consulta externa con hospitalario" con el número de consultas (consultorios atendidos por hospitalarios), los días y las horas que suman.'
   ]},
@@ -4205,7 +4210,7 @@ function exportarExcel(){
             const h=ex.horas||0;if(!h)return;
             const iniH=parseInt((ex.inicio||'07:00').split(':')[0]);
             const diurna=iniH>=7&&iniH<19;
-            hDia+=h;extH+=h;
+            hDia+=h;if(!ex.hosp)extH+=h;
             pDia+=h*(esDomFest||!diurna?130000:120000);
           });
         }
@@ -4267,7 +4272,7 @@ function exportarExcel(){
         extrasEf(dp,doc.id,iso).forEach(ex=>{
           const h=ex.horas||0;if(!h)return;
           const iniH=parseInt((ex.inicio||'07:00').split(':')[0]);
-          hDia+=h;totExtH+=h;lbl.push((ex.hosp?'HOSP+':'+')+h+'h');
+          hDia+=h;if(!ex.hosp)totExtH+=h;lbl.push((ex.hosp?'HOSP+':'+')+h+'h');
           pDia+=h*(esDomFest||iniH<7||iniH>=19?130000:120000);
         });
       }
@@ -4390,13 +4395,13 @@ function exportarExcel(){
   const headerFact=[
     'Anestesiólogo','Empresa',
     'Días trabajados','Horas turno diurnas','Horas turno nocturnas','Horas dom/festivos',
-    'Horas extras diurnas','Horas extras nocturnas','Total horas extras','Horas canceladas sin reposicion',
+    'Horas extras diurnas','Horas extras nocturnas','Total horas extras','Horas hospitalario emparejado','Horas canceladas sin reposicion',
     'Total horas'
   ];
   const rowsFact=[headerFact];
 
   docsAll.filter(d=>!esHospRol(d.rol)).forEach(doc=>{
-    let dias=0,hDiu=0,hNoc=0,hFest=0,extDiu=0,extNoc=0,extFest=0,hCanc=0;
+    let dias=0,hDiu=0,hNoc=0,hFest=0,extDiu=0,extNoc=0,extFest=0,hCanc=0,hHosp=0;
     let pTurnos=0,pExtras=0;
     for(let d2=1;d2<=nDias;d2++){
       const dt=new Date(anio,m,d2);
@@ -4418,6 +4423,7 @@ function exportarExcel(){
           const h=ex.horas||0;if(!h)return;
           const iniH=parseInt((ex.inicio||'07:00').split(':')[0]);
           const diurna=iniH>=7&&iniH<19;
+          if(ex.hosp){hHosp+=h;pExtras+=h*(esDomFest||!diurna?130000:120000);hDia+=h;return;}
           if(esDomFest){extFest+=h;pExtras+=h*130000;}
           else if(!diurna){extNoc+=h;pExtras+=h*130000;}
           else{extDiu+=h;pExtras+=h*120000;}
@@ -4430,19 +4436,19 @@ function exportarExcel(){
       if(cdX.perdidas>0&&(dp.turnos||[]).some(t=>t!=='no')) hCanc+=cdX.perdidas;
       if(hDia>0) dias++;
     }
-    const totH=hDiu+hNoc+hFest+extDiu+extNoc+extFest-hCanc;
+    const totH=hDiu+hNoc+hFest+extDiu+extNoc+extFest+hHosp-hCanc;
     const totExt=extDiu+extNoc+extFest;
     rowsFact.push([
       doc.nombre+' '+doc.apellidos, doc.empresa||'',
       dias, hDiu, hNoc, hFest,
-      extDiu, extNoc, totExt, hCanc||'',
+      extDiu, extNoc, totExt, hHosp||'', hCanc||'',
       totH
     ]);
   });
 
   const ws4=XLSX.utils.aoa_to_sheet(rowsFact);
   ws4['!cols']=[{wch:28},{wch:10},{wch:10},{wch:14},{wch:16},{wch:14},
-    {wch:16},{wch:18},{wch:14},{wch:18},{wch:12}];
+    {wch:16},{wch:18},{wch:14},{wch:18},{wch:18},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws4,'Horas '+MESES_C[m]);
 
   // Descargar
@@ -4540,13 +4546,19 @@ function calcFacturacion(uid, meses, anio=cuadroAnio){
       if(extrasEf(dp,uid,iso).length){
         extrasEf(dp,uid,iso).forEach(ex=>{
           if(ex.hosp){
-            desglose.hospH=(desglose.hospH||0)+(ex.horas||0);
-            if(ex.tipo==='ic'){desglose.hospIC=(desglose.hospIC||0)+(ex.horas||0);const iI=parseInt((ex.inicio||'07:00').split(':')[0]);desglose.hospICp=(desglose.hospICp||0)+(ex.horas||0)*(esFestODom||iI<7||iI>=19?130000:120000);}
+            // v2.34.0 — horas de hospitalario: seccion propia, NO son extras
+            const hh=ex.horas||0;if(!hh) return;
+            const iI=parseInt((ex.inicio||'07:00').split(':')[0]);
+            const vv=hh*(esFestODom||iI<7||iI>=19?130000:120000);
+            totalHoras+=hh; totalPesos+=vv;
+            desglose.hospH=(desglose.hospH||0)+hh; desglose.hospP=(desglose.hospP||0)+vv;
+            if(ex.tipo==='ic'){desglose.hospIC=(desglose.hospIC||0)+hh;desglose.hospICp=(desglose.hospICp||0)+vv;}
             else{
-              desglose.hospCEh=(desglose.hospCEh||0)+(ex.horas||0);
+              desglose.hospCEh=(desglose.hospCEh||0)+hh;desglose.hospCEp=(desglose.hospCEp||0)+vv;
               desglose.hospCEn=(desglose.hospCEn||0)+(ex.cons||0);
               desglose.hospCEdias=desglose.hospCEdias||{};desglose.hospCEdias[iso]=1;
             }
+            return;
           }
           const h=ex.horas||0;
           if(!h) return;
@@ -4591,9 +4603,9 @@ function renderFacturacion(uid, meses, containerId, anio=cuadroAnio){
         ${(desglose.extDiurno||0)+(desglose.extNocturno||0)>0?`<div style="font-size:11px;border-top:1px dashed #c8d4e0;padding-top:5px;margin-top:3px;font-style:italic;color:#555;">Extras registradas:</div>`:''}
         ${desglose.extDiurno>0?`<div style="font-size:11px;padding-left:10px;"><span style="color:#4e6c8a;">↳ Extra diurna (07-19h):</span> <b>${desglose.extDiurno}h</b> × $120.000/h = <b style="color:#0a6a40;">${fmt(desglose.extDiurno*120000)}</b></div>`:''}
         ${desglose.extNocturno>0?`<div style="font-size:11px;padding-left:10px;"><span style="color:#4e6c8a;">↳ Extra nocturna (≥19h):</span> <b>${desglose.extNocturno}h</b> × $130.000/h = <b style="color:#3030a0;">${fmt(desglose.extNocturno*130000)}</b></div>`:''}
-        ${desglose.hospH>0?`<div style="font-size:11px;padding-left:10px;"><span style="color:#0e7490;font-weight:600;">↳ Horas de hospitalario emparejado:</span> <b style="color:#0e7490;">${desglose.hospH}h</b> <span style="color:#8aa8c0;">incluidas en las extras</span></div>`:''}
-        ${desglose.hospIC>0?`<div style="font-size:11px;padding-left:24px;"><span style="color:#4e6c8a;">• Hospitalario de contrato (interconsultas):</span> <b>${desglose.hospIC}h</b> = <b style="color:#0a6a40;">${fmt(desglose.hospICp||0)}</b></div>`:''}
-        ${desglose.hospCEh>0?`<div style="font-size:11px;padding-left:24px;"><span style="color:#4e6c8a;">• Consulta externa con hospitalario:</span> <b>${desglose.hospCEn||0} consulta${(desglose.hospCEn||0)===1?'':'s'}</b> en ${Object.keys(desglose.hospCEdias||{}).length} día${Object.keys(desglose.hospCEdias||{}).length===1?'':'s'} · <b>+${desglose.hospCEh}h</b></div>`:''}
+        ${desglose.hospH>0?`<div style="font-size:11px;border-top:1px dashed #c8d4e0;padding-top:5px;margin-top:3px;"><span style="color:#0e7490;font-weight:600;">Horas de hospitalario emparejado:</span> <b style="color:#0e7490;">${desglose.hospH}h</b> = <b style="color:#0e7490;">${fmt(desglose.hospP||0)}</b></div>`:''}
+        ${desglose.hospIC>0?`<div style="font-size:11px;padding-left:10px;"><span style="color:#4e6c8a;">↳ Hospitalario de contrato (interconsultas):</span> <b>${desglose.hospIC}h</b> = <b style="color:#0a6a40;">${fmt(desglose.hospICp||0)}</b></div>`:''}
+        ${desglose.hospCEh>0?`<div style="font-size:11px;padding-left:10px;"><span style="color:#4e6c8a;">↳ Consulta externa con hospitalario:</span> <b>${desglose.hospCEn||0} consulta${(desglose.hospCEn||0)===1?'':'s'}</b> en ${Object.keys(desglose.hospCEdias||{}).length} día${Object.keys(desglose.hospCEdias||{}).length===1?'':'s'} · <b>${desglose.hospCEh}h</b> = <b style="color:#0a6a40;">${fmt(desglose.hospCEp||0)}</b></div>`:''}
         ${desglose.cobH>0?`<div style="font-size:11px;border-top:1px dashed #c8d4e0;padding-top:5px;margin-top:3px;"><span style="color:#0a7a4a;font-weight:600;">Salas canceladas cobradas (sin reposición):</span> <b style="color:#0a7a4a;">${desglose.cobH}h</b> <span style="color:#8aa8c0;">incluidas en los turnos</span></div>`:''}
         ${desglose.cancH>0?`<div style="font-size:11px;border-top:1px dashed #c8d4e0;padding-top:5px;margin-top:3px;"><span style="color:#c0392b;font-weight:600;">Salas canceladas sin reposición:</span> <b style="color:#c0392b;">−${desglose.cancH}h</b> = <b style="color:#c0392b;">−${fmt(desglose.cancP)}</b></div>`:''}
       </div>
