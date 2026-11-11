@@ -2133,6 +2133,13 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.35.0',n:'Verificar PDF: nombres, IME y equivalencias de salas',f:'2026-11-10',cambios:[
+    'Verificar PDF programa: un anestesiólogo coincide si en la sección del PDF aparecen su primer nombre y su primer apellido (en cualquier orden), sin importar tildes, ñ, mayúsculas, paréntesis o puntos. Ej.: "Fabian Arturo Guerrero Ospina" = "Fabian Guerrero". Miguel Gonzalez ya no coincide con Jorge Gonzalez.',
+    'Empresa IME: un anestesiólogo IME solo coincide con un nombre que lleve "IME" en el PDF, y uno SEDAR/Colsubsidio solo con un nombre sin "IME". Si aun así hay dos con el mismo primer nombre y primer apellido, se marca ⚠️ "nombre ambiguo, revisar".',
+    'Equivalencias de salas: Sala 1 (1.er anestesiólogo) → SALA DE URGENCIAS; Sala 1 (2.º) → TURNO NOCHE; Sala N → SALA N; Consultorio 1 → CONSULTTA 711; Anestesia fuera de quirófano → ANESTESIA FUERA DE QUIROFANO AM. La tabla es configurable (VERIF_PDF_EQUIV).',
+    'Se ignoran las filas del PDF que dicen LOCAL (no requieren anestesiología).',
+    'Cada fila del resultado muestra qué nombre encontró en el PDF para esa sección, con ✅ si coincide y ⚠️ si no.'
+  ]},
   {v:'2.34.0',n:'Extras solo para pagos anticipados',f:'2026-11-04',cambios:[
     '"Extras registradas" ahora suma únicamente las horas extras ingresadas a mano (turnos de anestesiólogos pagados por anticipado). Diurnas 07–19 h; nocturnas desde las 19 h.',
     'Las horas de hospitalario emparejado salen de las extras y tienen su propia sección en la facturación estimada: "Hospitalario de contrato (interconsultas)" y "Consulta externa con hospitalario", cada una con horas y valor. El total del mes no cambia.',
@@ -6329,24 +6336,86 @@ async function enviarTextoProgWa(){
 // se detectan los encabezados de sección (SALA N / TURNO NOCTURNO) y se
 // verifica si el nombre que AgendaANS tiene asignado en cada sala
 // aparece dentro de esa sección del PDF.
+// v2.35.0 — Tabla de equivalencias AgendaANS → encabezado de seccion del PDF/Excel.
+// Configurable: para agregar una equivalencia basta con añadir una fila.
+//   tipo: tipo de sala en AgendaANS (sala, consultorio, interconsulta, oncologia, sedacion, urgencias)
+//   num : numero de la sala en AgendaANS, o '*' para cualquiera
+//   pos : (opcional) posicion del anestesiologo dentro de la sala (1 = primero, 2 = segundo…)
+//   pdf : encabezado(s) aceptados en el PDF; el primero es el que se muestra. {N} = numero de la sala.
+// Se usa la primera fila que coincida, de arriba hacia abajo.
+const VERIF_PDF_NOCHE=['TURNO NOCHE','TURNO NOCTURNO'];
+const VERIF_PDF_EQUIV=[
+  {tipo:'sala',num:1,pos:1,pdf:['SALA DE URGENCIAS']},
+  {tipo:'sala',num:1,pos:2,pdf:VERIF_PDF_NOCHE},
+  {tipo:'sala',num:'*',pdf:['SALA {N}']},
+  {tipo:'consultorio',num:1,pdf:['CONSULTTA 711','CONSULTA 711']},
+  {tipo:'interconsulta',num:'*',pdf:['ANESTESIA FUERA DE QUIROFANO AM']},
+];
 function abrirVerifPdf(){
   const inp=document.getElementById('verif-pdf-input');
   if(inp) inp.click();
 }
+// Normalizacion de encabezados de seccion: MAYUSCULAS sin tildes, espacios simples,
+// y "SALA2"/"SALA  2" → "SALA 2".
 function normTxt(s){
   return (s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
 }
-function nombreCoincideEnTexto(nombre,texto){
-  if(!texto) return false;
-  const tNombre=normTxt(nombre);
-  if(!tNombre) return false;
-  if(texto.includes(tNombre)) return true;
-  // Fallback: si no coincide como frase exacta, exige que todas las palabras
-  // significativas del nombre (3+ letras) aparezcan en la seccion, sin importar
-  // el orden — tolera variaciones de formato entre AgendaANS y el PDF.
-  const palabras=tNombre.split(' ').filter(w=>w.length>=3);
-  if(!palabras.length) return false;
-  return palabras.every(w=>texto.includes(w));
+function claveSeccion(s){
+  return normTxt(s).replace(/[().]/g,' ').replace(/\bSALA\s*(\d+)\b/g,'SALA $1').replace(/\s+/g,' ').trim();
+}
+// Normalizacion de nombres (AgendaANS y PDF): minusculas, sin tildes (ñ→n),
+// sin parentesis ni puntos, espacios simples. Devuelve la lista de palabras.
+function normNombreTok(s){
+  return (s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()
+    .replace(/[().,;:\/\\\-_]/g,' ').replace(/\s+/g,' ').trim();
+}
+// Primer nombre, primer apellido y marcador de empresa IME de un anestesiologo de AgendaANS.
+function claveNombreDoc(doc,u){
+  const esIme=!!(doc&&isIME(doc));
+  let nom='',ape='';
+  const tieneProp=doc&&doc.nombre&&doc.nombre!=='IME'&&doc.apellidos&&doc.apellidos.trim();
+  if(tieneProp){
+    nom=normNombreTok(doc.nombre).split(' ')[0]||'';
+    ape=normNombreTok(doc.apellidos).split(' ')[0]||'';
+  } else {
+    // IME generico: nombre suelto de la asignacion ("Nombre Apellido …")
+    const w=normNombreTok((u&&u.imeNombre)||(doc?(doc.nombre+' '+(doc.apellidos||'')):'')).split(' ').filter(x=>x&&x!=='ime');
+    nom=w[0]||''; ape=w[1]||'';
+  }
+  if(nom==='ime') nom='';
+  return {nom,ape,esIme};
+}
+// Busca primer nombre + primer apellido (cualquier orden, cercanos) en una linea del PDF
+// y verifica que el marcador IME coincida con la empresa.
+// Devuelve el texto encontrado tal como aparece en el PDF, o null.
+function buscarNombreEnLinea(linea,k){
+  if(!k.nom) return null;
+  const raw=(linea||'').replace(/[().,;:\/\\\-_]/g,' ').split(/\s+/).filter(Boolean);
+  const tok=raw.map(normNombreTok);
+  for(let i=0;i<tok.length;i++){
+    if(tok[i]!==k.nom) continue;
+    if(!k.ape){
+      const hayIme=tok.slice(i+1,i+4).includes('ime');
+      if(hayIme===k.esIme) return raw[i]+(hayIme?' IME':'');
+      continue;
+    }
+    for(let j=Math.max(0,i-4);j<=Math.min(tok.length-1,i+4);j++){
+      if(j===i||tok[j]!==k.ape) continue;
+      const a=Math.min(i,j),b=Math.max(i,j);
+      let imeIdx=-1;
+      for(let t=b+1;t<=Math.min(tok.length-1,b+3);t++){ if(tok[t]==='ime'){imeIdx=t;break;} }
+      if((imeIdx>=0)!==k.esIme) continue;
+      let fin=b;
+      if(imeIdx>=0) fin=imeIdx;
+      else if(raw[b+1]&&/^[a-zñ]{3,}$/i.test(tok[b+1])) fin=b+1; // segundo apellido
+      return raw.slice(a,fin+1).join(' ');
+    }
+  }
+  return null;
+}
+function buscarNombreEnSeccion(lineas,k){
+  for(const l of (lineas||[])){ const r=buscarNombreEnLinea(l,k); if(r) return r; }
+  return null;
 }
 async function onVerifPdfSeleccionado(ev){
   const file=ev.target.files&&ev.target.files[0];
@@ -6363,13 +6432,33 @@ async function onVerifPdfSeleccionado(ev){
     toast('No se pudo leer el PDF: '+(err.message||err),'error');
   }
 }
+// Detecta si una fila corta del PDF es un encabezado de seccion; devuelve su clave o null.
+function detectarEncabezadoPdf(t){
+  // 1) encabezados explicitos de la tabla de equivalencias (los mas largos primero)
+  const explicitos=[];
+  VERIF_PDF_EQUIV.forEach(e=>e.pdf.forEach(p=>{ if(!p.includes('{N}')) explicitos.push(claveSeccion(p)); }));
+  explicitos.sort((a,b)=>b.length-a.length);
+  const tt=claveSeccion(t);
+  for(const h of explicitos){
+    const re=new RegExp('(^|\\s)'+h.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(\\s|$)');
+    if(re.test(tt)) return h;
+  }
+  // 2) encabezados genericos (para que el contenido de secciones no listadas no se mezcle)
+  let m;
+  if((m=tt.match(/\bANESTESIA FUERA DE QUIROFANO(?: (AM|PM))?\b/))) return m[0];
+  if((m=tt.match(/\bCONSULT+A \d+\b/))) return m[0];
+  if((m=tt.match(/\bTURNO NOC\w*\b/))) return m[0];
+  if((m=tt.match(/\bSALA DE [A-Z]+\b/))) return m[0];
+  if((m=tt.match(/\bSALA \d+\b/))) return m[0];
+  return null;
+}
 async function extraerSeccionesPdf(arrayBuffer){
   if(!window.pdfjsLib) throw new Error('Librería PDF no cargada aún, intenta de nuevo en unos segundos.');
   if(!window.pdfjsLib.GlobalWorkerOptions.workerSrc){
     window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
   const doc=await window.pdfjsLib.getDocument({data:arrayBuffer}).promise;
-  const secciones={}; // 'SALA_1'.. / 'NOCTURNO' -> [lineas]
+  const secciones={}; // clave de encabezado ('SALA 2', 'SALA DE URGENCIAS', 'TURNO NOCHE'…) -> [lineas]
   let actual=null;
   for(let p=1;p<=doc.numPages;p++){
     const page=await doc.getPage(p);
@@ -6387,61 +6476,110 @@ async function extraerSeccionesPdf(arrayBuffer){
     rows.forEach(r=>{
       const linea=r.items.map(i=>i.str).join(' ');
       const t=normTxt(linea);
-      // Algunos PDFs escriben "SALA N" en su propia fila; otros la pegan junto con
-      // el codigo de fecha/sala de la izquierda (ej. "02.08.2026 00QUQUI2 SALA2").
-      // Por eso no anclamos la busqueda al inicio de la fila — solo exigimos que la
-      // fila sea corta (una fila de encabezado, no una fila larga de un caso que
-      // por coincidencia mencione "sala" en el texto del procedimiento).
-      const esFilaCorta=t.length<60;
-      const mSala=esFilaCorta?t.match(/\bSALA\s*(\d+)\b/):null;
-      const mNoct=esFilaCorta?t.match(/\bTURNO NOCTURNO\b/):null;
-      if(mSala){ actual='SALA_'+mSala[1]; secciones[actual]=secciones[actual]||[]; return; }
-      if(mNoct){ actual='NOCTURNO'; secciones[actual]=secciones[actual]||[]; return; }
+      // Filas con anestesia LOCAL no requieren anestesiologo: se ignoran.
+      if(/\bLOCAL\b/.test(t)) return;
+      // El encabezado puede venir solo o pegado al codigo de fecha/sala de la izquierda
+      // (ej. "02.08.2026 00QUQUI2 SALA2"); se exige fila corta para no confundirlo con
+      // un caso cuyo procedimiento mencione "sala".
+      const h=t.length<80?detectarEncabezadoPdf(t):null;
+      if(h){ actual=h; secciones[actual]=secciones[actual]||[]; return; }
       if(actual){ (secciones[actual]=secciones[actual]||[]).push(linea); }
     });
   }
   return secciones;
 }
+function equivSalaPdf(sala,pos){
+  return VERIF_PDF_EQUIV.find(e=>e.tipo===sala.tipo&&(e.num==='*'||e.num===sala.num)&&(!e.pos||e.pos===pos))||null;
+}
+function encabezadosEquiv(e,sala){ return e.pdf.map(p=>claveSeccion(p.replace('{N}',sala.num))); }
+function lineasSecciones(secciones,claves){
+  let out=[],existe=false;
+  claves.forEach(c=>{ if(secciones[c]){ existe=true; out=out.concat(secciones[c]); } });
+  return {lineas:out,existe};
+}
+function etiquetaSalaAns(sala){
+  return sala.tipo==='sala'?'SALA '+sala.num:sala.tipo==='consultorio'?'CONS. '+sala.num:sala.tipo==='interconsulta'?'AFQ '+sala.num:(sala.tipo.toUpperCase().slice(0,5)+' '+sala.num);
+}
 function renderVerifPdf(secciones){
   const panel=document.getElementById('panel-verif-pdf');
   const cont=document.getElementById('verif-pdf-resultado');
   if(!panel||!cont) return;
-  const salasNum=[...new Set(salasCur.filter(s=>s.tipo==='sala').map(s=>s.num))].sort((a,b)=>a-b);
-  const nocturnoTexto=normTxt((secciones['NOCTURNO']||[]).join(' \n '));
+  // Claves de nombre de todos los anestesiologos activos: para detectar ambiguos y
+  // para mostrar quien aparece en el PDF cuando no coincide.
+  const candidatos=getDocs().map(d=>({d,k:claveNombreDoc(d,null)})).filter(c=>c.k.nom);
+  const cuenta={};
+  candidatos.forEach(c=>{ const kk=c.k.nom+'|'+c.k.ape+'|'+c.k.esIme; cuenta[kk]=(cuenta[kk]||0)+1; });
+  const reconocidosEn=(lineas)=>{
+    const vistos=[];
+    candidatos.forEach(c=>{ const r=buscarNombreEnSeccion(lineas,c.k); if(r&&!vistos.includes(r)) vistos.push(r); });
+    return vistos;
+  };
+  const nocheClaves=VERIF_PDF_NOCHE.map(claveSeccion);
+  const ordenTipo={sala:0,consultorio:1,interconsulta:2,oncologia:3,sedacion:4,urgencias:5};
+  const salasVerif=salasCur.filter(s=>VERIF_PDF_EQUIV.some(e=>e.tipo===s.tipo&&(e.num==='*'||e.num===s.num)))
+    .slice().sort((a,b)=>(ordenTipo[a.tipo]??9)-(ordenTipo[b.tipo]??9)||a.num-b.num);
   let filas=[];
-  salasNum.forEach(n=>{
-    const sala=salasCur.find(s=>s.tipo==='sala'&&s.num===n);
-    const texto=normTxt((secciones['SALA_'+n]||[]).join(' \n '));
-    const users=(sala&&sala.users)||[];
-    if(!users.length&&sala&&sala.cancelada){
-      const tieneContenidoPdf=texto.replace(/[^A-Z]/g,'').length>3;
-      filas.push({sala:'SALA '+n,turno:'—',ans:'Cancelada',
-        estado:tieneContenidoPdf?'warn':'ok',
-        detalle:tieneContenidoPdf?'La sala esta CANCELADA en AgendaANS pero el PDF muestra actividad — revisar.':'Sala cancelada en AgendaANS; el PDF tampoco muestra actividad.'});
-      return;
-    }
+  salasVerif.forEach(sala=>{
+    const etq=etiquetaSalaAns(sala);
+    const users=sala.users||[];
+    const eBase=equivSalaPdf(sala,1);
     if(!users.length){
-      const tieneContenidoPdf=texto.replace(/[^A-Z]/g,'').length>3;
-      filas.push({sala:'SALA '+n,turno:'—',ans:'Sin asignar',
-        estado:tieneContenidoPdf?'warn':'ok',
-        detalle:tieneContenidoPdf?'El PDF muestra actividad en esta sala pero AgendaANS no tiene anestesiólogo asignado — revisar.':'Sin asignación en AgendaANS ni contenido en el PDF para esta sala.'});
+      const cl=encabezadosEquiv(eBase,sala);
+      const {lineas}=lineasSecciones(secciones,cl);
+      const enPdf=reconocidosEn(lineas);
+      const tieneContenidoPdf=enPdf.length>0||normTxt(lineas.join(' ')).replace(/[^A-Z]/g,'').length>3;
+      const pdfTxt=enPdf.length?enPdf.join(', '):'—';
+      if(sala.cancelada){
+        filas.push({sala:etq,seccion:eBase.pdf[0].replace('{N}',sala.num),turno:'—',ans:'Cancelada',pdf:pdfTxt,
+          estado:tieneContenidoPdf?'warn':'ok',
+          detalle:tieneContenidoPdf?'La sala esta CANCELADA en AgendaANS pero el PDF muestra actividad — revisar.':'Sala cancelada en AgendaANS; el PDF tampoco muestra actividad.'});
+      } else {
+        filas.push({sala:etq,seccion:eBase.pdf[0].replace('{N}',sala.num),turno:'—',ans:'Sin asignar',pdf:pdfTxt,
+          estado:tieneContenidoPdf?'warn':'ok',
+          detalle:tieneContenidoPdf?'El PDF muestra actividad en esta seccion pero AgendaANS no tiene anestesiólogo asignado — revisar.':'Sin asignación en AgendaANS ni contenido en el PDF para esta seccion.'});
+      }
       return;
     }
-    users.forEach(u=>{
+    users.forEach((u,i)=>{
+      const e=equivSalaPdf(sala,i+1)||eBase;
+      const seccionTxt=e.pdf[0].replace('{N}',sala.num);
       const doc=getP(u.uid);
       const nombre=nombreCorto(doc,u);
+      const k=claveNombreDoc(doc,u);
       const esNoct=(u.turno==='noche'||u.turno==='guardia');
-      const objetivo=esNoct?nocturnoTexto:texto;
-      const encontrado=nombreCoincideEnTexto(nombre,objetivo);
+      const cl=encabezadosEquiv(e,sala);
+      // Un turno nocturno / 24 h tambien se acepta en la seccion de turno noche.
+      const clBusq=esNoct?cl.concat(nocheClaves.filter(c=>!cl.includes(c))):cl;
+      const {lineas,existe}=lineasSecciones(secciones,clBusq);
+      const encontrado=doc?buscarNombreEnSeccion(lineas,k):null;
+      const ambiguo=!!(encontrado&&doc&&(cuenta[k.nom+'|'+k.ape+'|'+k.esIme]||0)>1);
+      const enPdf=encontrado?[encontrado]:reconocidosEn(lineas);
+      let detalle;
+      if(ambiguo) detalle='Nombre ambiguo, revisar: hay más de un anestesiólogo '+(k.esIme?'IME':'no IME')+' con el mismo primer nombre y primer apellido.';
+      else if(encontrado) detalle='Coincide con el PDF.';
+      else if(!existe) detalle='La sección "'+seccionTxt+'" no aparece en el PDF — revisar.';
+      else detalle='No se encontró "'+nombre+'"'+(k.esIme?' (IME)':'')+' en "'+seccionTxt+'" del PDF'+(enPdf.length?'; el PDF tiene a '+enPdf.join(', '):'')+' — revisar.';
       filas.push({
-        sala:'SALA '+n,
+        sala:etq,seccion:seccionTxt,
         turno:turnoLabel(u.turno||'dia'),
-        ans:nombre,
-        estado:encontrado?'ok':'warn',
-        detalle:encontrado?'Coincide con el PDF.':('No se encontró "'+nombre+'" en '+(esNoct?'la sección Turno nocturno':('SALA '+n))+' del PDF — revisar.')
+        ans:nombre+(k.esIme&&!/\bIME\b/.test(nombre)?' IME':''),
+        pdf:enPdf.length?enPdf.join(', '):'—',
+        estado:(encontrado&&!ambiguo)?'ok':'warn',
+        detalle
       });
     });
+    // Posiciones con equivalencia propia (p. ej. Sala 1 → 2.º anestesiólogo = TURNO NOCHE)
+    // sin anestesiólogo en AgendaANS pero con alguien en el PDF.
+    VERIF_PDF_EQUIV.filter(e=>e.pos&&e.pos>users.length&&e.tipo===sala.tipo&&(e.num==='*'||e.num===sala.num)).forEach(e=>{
+      const {lineas}=lineasSecciones(secciones,encabezadosEquiv(e,sala));
+      const enPdf=reconocidosEn(lineas);
+      if(!enPdf.length) return;
+      const seccionTxt=e.pdf[0].replace('{N}',sala.num);
+      filas.push({sala:etq,seccion:seccionTxt,turno:'—',ans:'Sin '+e.pos+'.º anestesiólogo',pdf:enPdf.join(', '),
+        estado:'warn',detalle:'El PDF tiene a '+enPdf.join(', ')+' en "'+seccionTxt+'" pero AgendaANS no tiene '+e.pos+'.º anestesiólogo en '+etq+' — revisar.'});
+    });
   });
+  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
   if(!filas.length){
     cont.innerHTML='<div class="empty"><div class="empty-title">No hay salas configuradas para comparar.</div></div>';
   } else {
@@ -6451,12 +6589,13 @@ function renderVerifPdf(secciones){
     </div>`;
     cont.innerHTML=resumen+filas.map(f=>`
       <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;padding:4px 8px;border-radius:5px;margin-bottom:3px;font-size:11.5px;line-height:1.3;
-        background:${f.estado==='ok'?'#eafaf1':'#fff7e6'};border:1px solid ${f.estado==='ok'?'#b7e4c7':'#f5c16c'};" title="${f.detalle.replace(/"/g,'&quot;')}">
-        <span style="font-weight:700;width:52px;flex-shrink:0;">${f.sala}</span>
-        <span style="color:#5b6b80;width:84px;flex-shrink:0;">${f.turno}</span>
-        <span style="flex:1 1 100px;min-width:60px;color:#0d1f35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.ans}</span>
-        ${f.estado!=='ok'?`<span style="flex:1 1 100%;font-size:10px;color:#92620a;overflow-wrap:break-word;white-space:normal;">${f.detalle}</span>`:''}
+        background:${f.estado==='ok'?'#eafaf1':'#fff7e6'};border:1px solid ${f.estado==='ok'?'#b7e4c7':'#f5c16c'};" title="${esc(f.detalle)}">
+        <span style="font-weight:700;width:56px;flex-shrink:0;">${esc(f.sala)}</span>
+        <span style="color:#5b6b80;width:84px;flex-shrink:0;">${esc(f.turno)}</span>
+        <span style="flex:1 1 100px;min-width:60px;color:#0d1f35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(f.ans)}</span>
         <span style="flex-shrink:0;">${f.estado==='ok'?'✅':'⚠️'}</span>
+        <span style="flex:1 1 100%;font-size:10px;color:#5b6b80;overflow-wrap:break-word;white-space:normal;">PDF «${esc(f.seccion)}»: <b style="color:#0d1f35;">${esc(f.pdf)}</b></span>
+        ${f.estado!=='ok'?`<span style="flex:1 1 100%;font-size:10px;color:#92620a;overflow-wrap:break-word;white-space:normal;">${esc(f.detalle)}</span>`:''}
       </div>
     `).join('');
   }
