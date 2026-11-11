@@ -2136,7 +2136,7 @@ const CHANGELOG=[
   {v:'2.35.0',n:'Verificar PDF: nombres, IME y equivalencias de salas',f:'2026-11-10',cambios:[
     'Verificar PDF programa: un anestesiólogo coincide si en la sección del PDF aparecen su primer nombre y su primer apellido (en cualquier orden), sin importar tildes, ñ, mayúsculas, paréntesis o puntos. Ej.: "Fabian Arturo Guerrero Ospina" = "Fabian Guerrero". Miguel Gonzalez ya no coincide con Jorge Gonzalez.',
     'Empresa IME: un anestesiólogo IME solo coincide con un nombre que lleve "IME" en el PDF, y uno SEDAR/Colsubsidio solo con un nombre sin "IME". Si aun así hay dos con el mismo primer nombre y primer apellido, se marca ⚠️ "nombre ambiguo, revisar".',
-    'Equivalencias de salas: Sala 1 (1.er anestesiólogo) → SALA DE URGENCIAS; Sala 1 (2.º) → TURNO NOCHE; Sala N → SALA N; Consultorio 1 → CONSULTTA 711; Anestesia fuera de quirófano → ANESTESIA FUERA DE QUIROFANO AM. La tabla es configurable (VERIF_PDF_EQUIV).',
+    'Equivalencias de salas: Quirófano Urgente (sala 1 del PDF) → SALA DE URGENCIAS de día y TURNO NOCHE en turno nocturno (24 h se acepta en cualquiera de las dos); Salas de Cirugía 2 a 6 → SALA 2 a SALA 6; Consultorio 1 → CONSULTTA 711; Anestesia fuera de quirófano → ANESTESIA FUERA DE QUIROFANO AM. La tabla es configurable (VERIF_PDF_EQUIV).',
     'Se ignoran las filas del PDF que dicen LOCAL (no requieren anestesiología).',
     'Cada fila del resultado muestra qué nombre encontró en el PDF para esa sección, con ✅ si coincide y ⚠️ si no.'
   ]},
@@ -6340,13 +6340,14 @@ async function enviarTextoProgWa(){
 // Configurable: para agregar una equivalencia basta con añadir una fila.
 //   tipo: tipo de sala en AgendaANS (sala, consultorio, interconsulta, oncologia, sedacion, urgencias)
 //   num : numero de la sala en AgendaANS, o '*' para cualquiera
-//   pos : (opcional) posicion del anestesiologo dentro de la sala (1 = primero, 2 = segundo…)
+//   turnos: (opcional) turnos del anestesiologo a los que aplica (dia, noche, guardia, h6m, h6t)
 //   pdf : encabezado(s) aceptados en el PDF; el primero es el que se muestra. {N} = numero de la sala.
 // Se usa la primera fila que coincida, de arriba hacia abajo.
 const VERIF_PDF_NOCHE=['TURNO NOCHE','TURNO NOCTURNO'];
 const VERIF_PDF_EQUIV=[
-  {tipo:'sala',num:1,pos:1,pdf:['SALA DE URGENCIAS']},
-  {tipo:'sala',num:1,pos:2,pdf:VERIF_PDF_NOCHE},
+  // Quirofano Urgente de AgendaANS = sala 1 del PDF: turno nocturno → TURNO NOCHE; de dia → SALA DE URGENCIAS
+  {tipo:'urgencias',num:'*',turnos:['noche'],pdf:VERIF_PDF_NOCHE},
+  {tipo:'urgencias',num:'*',pdf:['SALA DE URGENCIAS','SALA 1']},
   {tipo:'sala',num:'*',pdf:['SALA {N}']},
   {tipo:'consultorio',num:1,pdf:['CONSULTTA 711','CONSULTA 711']},
   {tipo:'interconsulta',num:'*',pdf:['ANESTESIA FUERA DE QUIROFANO AM']},
@@ -6372,18 +6373,19 @@ function normNombreTok(s){
 // Primer nombre, primer apellido y marcador de empresa IME de un anestesiologo de AgendaANS.
 function claveNombreDoc(doc,u){
   const esIme=!!(doc&&isIME(doc));
-  let nom='',ape='';
+  let nom='',ape='',ape2='';
   const tieneProp=doc&&doc.nombre&&doc.nombre!=='IME'&&doc.apellidos&&doc.apellidos.trim();
   if(tieneProp){
     nom=normNombreTok(doc.nombre).split(' ')[0]||'';
     ape=normNombreTok(doc.apellidos).split(' ')[0]||'';
+    ape2=normNombreTok(doc.apellidos).split(' ')[1]||'';
   } else {
     // IME generico: nombre suelto de la asignacion ("Nombre Apellido …")
     const w=normNombreTok((u&&u.imeNombre)||(doc?(doc.nombre+' '+(doc.apellidos||'')):'')).split(' ').filter(x=>x&&x!=='ime');
-    nom=w[0]||''; ape=w[1]||'';
+    nom=w[0]||''; ape=w[1]||''; ape2=w[2]||'';
   }
   if(nom==='ime') nom='';
-  return {nom,ape,esIme};
+  return {nom,ape,ape2,esIme};
 }
 // Busca primer nombre + primer apellido (cualquier orden, cercanos) en una linea del PDF
 // y verifica que el marcador IME coincida con la empresa.
@@ -6407,7 +6409,7 @@ function buscarNombreEnLinea(linea,k){
       if((imeIdx>=0)!==k.esIme) continue;
       let fin=b;
       if(imeIdx>=0) fin=imeIdx;
-      else if(raw[b+1]&&/^[a-zñ]{3,}$/i.test(tok[b+1])) fin=b+1; // segundo apellido
+      else if(k.ape2&&tok[b+1]===k.ape2) fin=b+1; // segundo apellido (solo para mostrar)
       return raw.slice(a,fin+1).join(' ');
     }
   }
@@ -6488,8 +6490,8 @@ async function extraerSeccionesPdf(arrayBuffer){
   }
   return secciones;
 }
-function equivSalaPdf(sala,pos){
-  return VERIF_PDF_EQUIV.find(e=>e.tipo===sala.tipo&&(e.num==='*'||e.num===sala.num)&&(!e.pos||e.pos===pos))||null;
+function equivSalaPdf(sala,turno){
+  return VERIF_PDF_EQUIV.find(e=>e.tipo===sala.tipo&&(e.num==='*'||e.num===sala.num)&&(!e.turnos||e.turnos.includes(turno)))||null;
 }
 function encabezadosEquiv(e,sala){ return e.pdf.map(p=>claveSeccion(p.replace('{N}',sala.num))); }
 function lineasSecciones(secciones,claves){
@@ -6498,7 +6500,7 @@ function lineasSecciones(secciones,claves){
   return {lineas:out,existe};
 }
 function etiquetaSalaAns(sala){
-  return sala.tipo==='sala'?'SALA '+sala.num:sala.tipo==='consultorio'?'CONS. '+sala.num:sala.tipo==='interconsulta'?'AFQ '+sala.num:(sala.tipo.toUpperCase().slice(0,5)+' '+sala.num);
+  return sala.tipo==='urgencias'?'Q. URG.':sala.tipo==='sala'?'SALA '+sala.num:sala.tipo==='consultorio'?'CONS. '+sala.num:sala.tipo==='interconsulta'?'AFQ '+sala.num:(sala.tipo.toUpperCase().slice(0,5)+' '+sala.num);
 }
 function renderVerifPdf(secciones){
   const panel=document.getElementById('panel-verif-pdf');
@@ -6515,14 +6517,14 @@ function renderVerifPdf(secciones){
     return vistos;
   };
   const nocheClaves=VERIF_PDF_NOCHE.map(claveSeccion);
-  const ordenTipo={sala:0,consultorio:1,interconsulta:2,oncologia:3,sedacion:4,urgencias:5};
+  const ordenTipo={urgencias:-1,sala:0,consultorio:1,interconsulta:2,oncologia:3,sedacion:4};
   const salasVerif=salasCur.filter(s=>VERIF_PDF_EQUIV.some(e=>e.tipo===s.tipo&&(e.num==='*'||e.num===s.num)))
     .slice().sort((a,b)=>(ordenTipo[a.tipo]??9)-(ordenTipo[b.tipo]??9)||a.num-b.num);
   let filas=[];
   salasVerif.forEach(sala=>{
     const etq=etiquetaSalaAns(sala);
     const users=sala.users||[];
-    const eBase=equivSalaPdf(sala,1);
+    const eBase=equivSalaPdf(sala,'dia');
     if(!users.length){
       const cl=encabezadosEquiv(eBase,sala);
       const {lineas}=lineasSecciones(secciones,cl);
@@ -6540,8 +6542,8 @@ function renderVerifPdf(secciones){
       }
       return;
     }
-    users.forEach((u,i)=>{
-      const e=equivSalaPdf(sala,i+1)||eBase;
+    users.forEach(u=>{
+      const e=equivSalaPdf(sala,u.turno||'dia')||eBase;
       const seccionTxt=e.pdf[0].replace('{N}',sala.num);
       const doc=getP(u.uid);
       const nombre=nombreCorto(doc,u);
@@ -6549,7 +6551,9 @@ function renderVerifPdf(secciones){
       const esNoct=(u.turno==='noche'||u.turno==='guardia');
       const cl=encabezadosEquiv(e,sala);
       // Un turno nocturno / 24 h tambien se acepta en la seccion de turno noche.
-      const clBusq=esNoct?cl.concat(nocheClaves.filter(c=>!cl.includes(c))):cl;
+      let clBusq=esNoct?cl.concat(nocheClaves.filter(c=>!cl.includes(c))):cl;
+      // 24 h: tambien se acepta en la seccion diurna de la sala (p. ej. SALA DE URGENCIAS)
+      if(u.turno==='guardia') clBusq=clBusq.concat(encabezadosEquiv(eBase,sala).filter(c=>!clBusq.includes(c)));
       const {lineas,existe}=lineasSecciones(secciones,clBusq);
       const encontrado=doc?buscarNombreEnSeccion(lineas,k):null;
       const ambiguo=!!(encontrado&&doc&&(cuenta[k.nom+'|'+k.ape+'|'+k.esIme]||0)>1);
@@ -6568,15 +6572,16 @@ function renderVerifPdf(secciones){
         detalle
       });
     });
-    // Posiciones con equivalencia propia (p. ej. Sala 1 → 2.º anestesiólogo = TURNO NOCHE)
+    // Turnos con equivalencia propia (p. ej. Quirófano Urgente nocturno = TURNO NOCHE)
     // sin anestesiólogo en AgendaANS pero con alguien en el PDF.
-    VERIF_PDF_EQUIV.filter(e=>e.pos&&e.pos>users.length&&e.tipo===sala.tipo&&(e.num==='*'||e.num===sala.num)).forEach(e=>{
+    VERIF_PDF_EQUIV.filter(e=>e.turnos&&e.tipo===sala.tipo&&(e.num==='*'||e.num===sala.num)
+      &&!users.some(u=>e.turnos.includes(u.turno||'dia')||u.turno==='guardia')).forEach(e=>{
       const {lineas}=lineasSecciones(secciones,encabezadosEquiv(e,sala));
       const enPdf=reconocidosEn(lineas);
       if(!enPdf.length) return;
       const seccionTxt=e.pdf[0].replace('{N}',sala.num);
-      filas.push({sala:etq,seccion:seccionTxt,turno:'—',ans:'Sin '+e.pos+'.º anestesiólogo',pdf:enPdf.join(', '),
-        estado:'warn',detalle:'El PDF tiene a '+enPdf.join(', ')+' en "'+seccionTxt+'" pero AgendaANS no tiene '+e.pos+'.º anestesiólogo en '+etq+' — revisar.'});
+      filas.push({sala:etq,seccion:seccionTxt,turno:'—',ans:'Sin turno '+e.turnos.map(turnoLabel).join('/').toLowerCase(),pdf:enPdf.join(', '),
+        estado:'warn',detalle:'El PDF tiene a '+enPdf.join(', ')+' en "'+seccionTxt+'" pero AgendaANS no tiene ese turno asignado en '+etq+' — revisar.'});
     });
   });
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
