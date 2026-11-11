@@ -6562,7 +6562,13 @@ function renderVerifPdf(secciones){
       if(ambiguo) detalle='Nombre ambiguo, revisar: hay más de un anestesiólogo '+(k.esIme?'IME':'no IME')+' con el mismo primer nombre y primer apellido.';
       else if(encontrado) detalle='Coincide con el PDF.';
       else if(!existe) detalle='La sección "'+seccionTxt+'" no aparece en el PDF — revisar.';
-      else detalle='No se encontró "'+nombre+'"'+(k.esIme?' (IME)':'')+' en "'+seccionTxt+'" del PDF'+(enPdf.length?'; el PDF tiene a '+enPdf.join(', '):'')+' — revisar.';
+      else {
+        // ¿En que otra seccion del PDF aparece? (p. ej. asignado a un consultorio en AgendaANS
+        // pero en ANESTESIA FUERA DE QUIROFANO en el PDF, o de dia en AgendaANS y en TURNO NOCHE en el PDF)
+        const otras=doc?Object.keys(secciones).filter(c=>!clBusq.includes(c)&&buscarNombreEnSeccion(secciones[c],k)):[];
+        detalle='No se encontró "'+nombre+'"'+(k.esIme?' (IME)':'')+' en "'+seccionTxt+'" del PDF'+(enPdf.length?'; el PDF tiene a '+enPdf.join(', '):'')
+          +(otras.length?'. En el PDF aparece en «'+otras.join('», «')+'»':'')+' — revisar.';
+      }
       filas.push({
         sala:etq,seccion:seccionTxt,
         turno:turnoLabel(u.turno||'dia'),
@@ -6580,7 +6586,7 @@ function renderVerifPdf(secciones){
       const enPdf=reconocidosEn(lineas);
       if(!enPdf.length) return;
       const seccionTxt=e.pdf[0].replace('{N}',sala.num);
-      filas.push({sala:etq,seccion:seccionTxt,turno:'—',ans:'Sin turno '+e.turnos.map(turnoLabel).join('/').toLowerCase(),pdf:enPdf.join(', '),
+      filas.push({sala:etq,seccion:seccionTxt,turno:'—',ans:'Sin '+e.turnos.map(turnoLabel).join('/').toLowerCase(),pdf:enPdf.join(', '),
         estado:'warn',detalle:'El PDF tiene a '+enPdf.join(', ')+' en "'+seccionTxt+'" pero AgendaANS no tiene ese turno asignado en '+etq+' — revisar.'});
     });
   });
