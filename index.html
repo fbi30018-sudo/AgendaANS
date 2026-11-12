@@ -2133,6 +2133,10 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.35.1',n:'Consulta externa con hospitalarios: no mezclar interconsultas',f:'2026-11-12',cambios:[
+    'Corregido: cuando el mismo día el anestesiólogo tenía emparejados al hospitalario de interconsultas (p. ej. Miguel, 6 h mañana) y a un hospitalario de consulta externa (p. ej. Alexander, CE Completa 12 h), las 6 h de interconsulta se contaban como un consultorio más y se perdían: al anestesiólogo solo le sumaban 12 h en lugar de 18 h.',
+    'Ahora los consultorios se calculan solo con los hospitalarios que atienden consulta externa, y las horas de interconsulta de contrato (lunes a viernes) se suman aparte con su propia línea. Ej. 18 nov: CE de Fabián 12 h + consultorio de Alexander 12 h + interconsulta de Miguel 6 h = 30 h.'
+  ]},
   {v:'2.35.0',n:'Verificar PDF: nombres, IME y equivalencias de salas',f:'2026-11-10',cambios:[
     'Verificar PDF programa: un anestesiólogo coincide si en la sección del PDF aparecen su primer nombre y su primer apellido (en cualquier orden), sin importar tildes, ñ, mayúsculas, paréntesis o puntos. Ej.: "Fabian Arturo Guerrero Ospina" = "Fabian Guerrero". Miguel Gonzalez ya no coincide con Jorge Gonzalez.',
     'Empresa IME: un anestesiólogo IME solo coincide con un nombre que lleve "IME" en el PDF, y uno SEDAR/Colsubsidio solo con un nombre sin "IME". Si aun así hay dos con el mismo primer nombre y primer apellido, se marca ⚠️ "nombre ambiguo, revisar".',
@@ -3919,15 +3923,20 @@ function anesConsulta(uid,iso){
 }
 function agendasCfg(uid,iso){const a=APP.dist&&APP.dist[iso]&&APP.dist[iso].cfg&&APP.dist[iso].cfg.agendas;return (a&&a[uid])||null;}
 function hospsDe(uid,iso){return hospsAll().filter(h=>h.id!==uid&&hospPareja(h.id,iso)===uid&&hospHoras(h.id,iso)>0);}
+// v2.35.1 — turno de contrato de interconsultas (no es consulta externa): no entra al calculo de consultorios
+function hospTurnoIC(h,iso,t){return !!h&&h.rol==='interconsulta'&&esDiaHabil(iso)&&!HOSP_CE_T.includes(t);}
+function hospCeHoras(h,iso){return hospTurnos(h.id,iso).filter(t=>!hospTurnoIC(h,iso,t)).reduce((a,t)=>a+(HOSP_TURNO_H[t]||0),0);}
+// Hospitalarios emparejados que ese dia atienden consulta externa (excluye interconsultas de contrato)
+function hospsCeDe(uid,iso){return hospsDe(uid,iso).filter(h=>hospCeHoras(h,iso)>0);}
 // Resumen de agendas de consulta del dia (null = no aplica: se suman horas del hospitalario tal cual)
 function agendasDia(uid,iso){
   if(!uid||iso<HOSP_DESDE) return null;
-  const hs=hospsDe(uid,iso);if(!hs.length) return null;
+  const hs=hospsCeDe(uid,iso);if(!hs.length) return null;
   const own=anesConsulta(uid,iso),cfg=agendasCfg(uid,iso);
   if(!cfg&&!own.h) return null;
   const atiende=cfg?!!cfg.atiende:(hs.length===1);
   const n=(cfg&&cfg.n)?cfg.n:(hs.length+(atiende?1:0));
-  const dur=own.h||Math.max(...hs.map(h=>hospHoras(h.id,iso)));
+  const dur=own.h||Math.max(...hs.map(h=>hospCeHoras(h,iso)));
   const total=n*dur;
   return {hs,atiende,n,dur,own:own.h,ini:own.ini,total,extra:Math.max(0,total-own.h),manual:!!cfg};
 }
@@ -3938,17 +3947,17 @@ function agendasNota(ag){
 function hospExtras(uid,iso){
   const out=[];if(!uid||iso<HOSP_DESDE) return out;
   const ag=agendasDia(uid,iso);
-  if(ag){
-    if(ag.extra>0) out.push({horas:ag.extra,inicio:ag.ini,hosp:ag.hs[0].id,tipo:'ce',cons:Math.max(0,ag.n-(ag.atiende?1:0)),nota:agendasNota(ag)});
-    return out;
-  }
+  // Consulta externa con agendas (consultorios): un solo renglon con las horas de los hospitalarios de CE
+  if(ag&&ag.extra>0) out.push({horas:ag.extra,inicio:ag.ini,hosp:ag.hs[0].id,tipo:'ce',cons:Math.max(0,ag.n-(ag.atiende?1:0)),nota:agendasNota(ag)});
   hospsAll().forEach(h=>{
     if(h.id===uid||hospPareja(h.id,iso)!==uid) return;
     let primeraCe=true;
     hospTurnos(h.id,iso).forEach(t=>{
       const hh=HOSP_TURNO_H[t]||0;if(!hh) return;
       // Contrato de interconsultas: hospitalario con contrato, L-V no festivo, turno que no es de CE
-      const ic=h.rol==='interconsulta'&&esDiaHabil(iso)&&!HOSP_CE_T.includes(t);
+      const ic=hospTurnoIC(h,iso,t);
+      // v2.35.1 — con agendas de consulta, la CE ya va en el renglon de consultorios; la interconsulta se suma aparte
+      if(ag&&!ic) return;
       out.push({horas:hh,inicio:HOSP_TURNO_INI[t]||'07:00',hosp:h.id,tipo:ic?'ic':'ce',cons:(!ic&&primeraCe)?1:0,nota:'Hospitalario '+nomDoc(h.id)+' — '+(HOSP_TURNO_TXT[t]||t)+(ic?' (contrato interconsultas)':' (consulta externa)')});
       if(!ic) primeraCe=false;
     });
@@ -4002,7 +4011,7 @@ function guardarPareja(iso,hosp,con){
 // Ajuste de agendas de consulta del anestesiologo. patch: {atiende} | {n} | null (restablecer)
 async function cambiarAgendas(iso,uid,patch){
   const ag=agendasDia(uid,iso);
-  const nh=ag?ag.hs.length:hospsDe(uid,iso).length;
+  const nh=ag?ag.hs.length:hospsCeDe(uid,iso).length;
   const ok=await guardarCfgDia(iso,cfg=>{
     const a={...(cfg.agendas||{})};
     if(patch===null) delete a[uid];
