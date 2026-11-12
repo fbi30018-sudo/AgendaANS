@@ -2133,6 +2133,9 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.36.0',n:'Disponibilidad 2027 abierta',f:'2026-11-12',cambios:[
+    'Nuevo: los cuatro trimestres de 2027 (Ene—Mar, Abr—Jun, Jul—Sep, Oct—Dic) quedan habilitados desde ya para que los anestesiólogos registren su disponibilidad.'
+  ]},
   {v:'2.35.2',n:'Blindaje: agendas solo editables por el administrador',f:'2026-11-12',cambios:[
     'Seguridad: un anestesiólogo solo puede registrar o borrar SU PROPIA disponibilidad, de hoy en adelante y en trimestres abiertos; la validación ahora se hace también al guardar (antes solo al abrir el formulario).',
     'Seguridad: editar o borrar la agenda de otro anestesiólogo (Cuadro → editor), la distribución de salas, emparejamientos de hospitalarios, verificaciones de PDF y aprobación de usuarios quedan restringidos al administrador dentro de cada función de guardado, no solo ocultando botones.',
@@ -2379,10 +2382,10 @@ const TRIMESTRES=[
   {id:'Q2',label:'Abr—Jun',anio:2026,meses:[3,4,5],desde:'2026-04-01',abre:'2026-03-01'},
   {id:'Q3',label:'Jul—Sep',anio:2026,meses:[6,7,8],desde:'2026-07-01',abre:'2026-06-01'},
   {id:'Q4',label:'Oct—Dic',anio:2026,meses:[9,10,11],desde:'2026-10-01',abre:'2026-09-01'},
-  {id:'Q1',label:'Ene—Mar',anio:2027,meses:[0,1,2],desde:'2027-01-01',abre:'2026-12-01'},
-  {id:'Q2',label:'Abr—Jun',anio:2027,meses:[3,4,5],desde:'2027-04-01',abre:'2027-03-01'},
-  {id:'Q3',label:'Jul—Sep',anio:2027,meses:[6,7,8],desde:'2027-07-01',abre:'2027-06-01'},
-  {id:'Q4',label:'Oct—Dic',anio:2027,meses:[9,10,11],desde:'2027-10-01',abre:'2027-09-01'},
+  {id:'Q1',label:'Ene—Mar',anio:2027,meses:[0,1,2],desde:'2027-01-01',abre:'2026-11-01'},
+  {id:'Q2',label:'Abr—Jun',anio:2027,meses:[3,4,5],desde:'2027-04-01',abre:'2026-11-01'},
+  {id:'Q3',label:'Jul—Sep',anio:2027,meses:[6,7,8],desde:'2027-07-01',abre:'2026-11-01'},
+  {id:'Q4',label:'Oct—Dic',anio:2027,meses:[9,10,11],desde:'2027-10-01',abre:'2026-11-01'},
 ];
 
 let calY=new Date().getFullYear(),calM=new Date().getMonth(),calFiltro='all';
