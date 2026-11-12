@@ -897,10 +897,14 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
       <div class="sec-sep">Acceso al sistema</div>
       <div class="field">
         <label>Correo electronico o Numero de cedula</label>
-        <input type="text" id="reg-email" placeholder="correo@ejemplo.com  o  12345678" autocomplete="username">
+        <input type="text" id="reg-email" placeholder="correo@ejemplo.com  o  12345678" autocomplete="username" oninput="document.getElementById('reg-correo-f').style.display=this.value.includes('@')?'none':''">
         <div style="font-family:var(--mono);font-size:9px;color:var(--ink3);margin-top:4px;">
           Puedes usar tu correo personal <b>o</b> tu número de cédula como usuario de acceso.
         </div>
+      </div>
+      <div class="field" id="reg-correo-f">
+        <label>Correo electrónico (para recuperar tu contraseña)</label>
+        <input type="email" id="reg-correo" placeholder="correo@ejemplo.com" autocomplete="email">
       </div>
       <div class="grid2">
         <div class="field"><label>Contrasena</label><input type="password" id="reg-pwd" placeholder="Min. 8 caracteres"></div>
@@ -2440,7 +2444,8 @@ const CHANGELOG=[
     'Administrador: clic en un usuario abre su perfil completo y editable (los mismos datos que ve el usuario), con Cambiar contraseña (temporal, obligatoria de cambiar al ingresar), Enviar recuperación, Sesiones activas (cerrar una o todas) e Historial de cambios.',
     'Usuarios en tres secciones plegables con conteo — Anestesiólogos (subgrupos SEDAR, Colsubsidio, IME, Consulta externa), Administrativos y Hospitalarios — y buscador por nombre, cédula, correo o teléfono que ignora tildes y mayúsculas.',
     'Seguridad: las acciones de contraseña se ejecutan en el servidor (funciones de Netlify) con verificación de rol; un usuario no puede cambiarse rol, estado, empresa, sección ni grupo; cada cambio de perfil queda en la tabla de auditoría.',
-    'Se puede seguir entrando con la cédula aunque el correo de ingreso pase a ser el real.'
+    'Se puede seguir entrando con la cédula aunque el correo de ingreso pase a ser el real.',
+    'Corregido: los datos del registro inicial (correo, registro médico, teléfono, cédula, especialidad) no llegaban completos al perfil que ve el administrador. Ahora se copian al crear la cuenta, y los registros anteriores se recuperan con el script SQL. El registro con cédula pide además un correo real.'
   ]},
   {v:'2.36.0',n:'Disponibilidad 2027 abierta',f:'2026-11-12',cambios:[
     'Nuevo: los cuatro trimestres de 2027 (Ene—Mar, Abr—Jun, Jul—Sep, Oct—Dic) quedan habilitados desde ya para que los anestesiólogos registren su disponibilidad.'
@@ -2984,6 +2989,9 @@ async function doRegistro(){
   const errEl=document.getElementById('reg-err');
   const okEl=document.getElementById('reg-ok');
   if(!nombre||!apellidos||!rawEmail||!pwd){setErr(errEl,'Completa los campos requeridos','error');return;}
+  // v2.37.0 — correo real obligatorio (si el usuario de acceso es la cedula, se pide aparte)
+  const correoContacto=usaCedula?(document.getElementById('reg-correo')?.value||'').trim():rawEmail;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoContacto)){setErr(errEl,'Escribe un correo electrónico válido: ahí te llegará el enlace si olvidas la contraseña','error');return;}
   if(pwd.length<8){setErr(errEl,'Contrasena minimo 8 caracteres','error');return;}
   if(pwd!==pwd2){setErr(errEl,'Las contrasenas no coinciden','error');return;}
   const btn=document.getElementById('btn-reg');btn.disabled=true;
@@ -2998,6 +3006,7 @@ async function doRegistro(){
     empresa:document.getElementById('reg-empresa')?.value||'SEDAR',
     rol:(v=>['interconsulta','hospitalario'].includes(v)?v:'anestesiologo')(document.getElementById('reg-tipo')?.value),
     email,
+    correo:correoContacto, // correo real; la base de datos lo copia a perfiles.email
   };
   const {error}=await auth.signUp({email,password:pwd,options:{data:meta}});
   btn.disabled=false;
