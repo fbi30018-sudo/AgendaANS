@@ -2133,6 +2133,11 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.35.2',n:'Blindaje: agendas solo editables por el administrador',f:'2026-11-12',cambios:[
+    'Seguridad: un anestesiólogo solo puede registrar o borrar SU PROPIA disponibilidad, de hoy en adelante y en trimestres abiertos; la validación ahora se hace también al guardar (antes solo al abrir el formulario).',
+    'Seguridad: editar o borrar la agenda de otro anestesiólogo (Cuadro → editor), la distribución de salas, emparejamientos de hospitalarios, verificaciones de PDF y aprobación de usuarios quedan restringidos al administrador dentro de cada función de guardado, no solo ocultando botones.',
+    'Corregido: el perfil Viewer (solo lectura) podía entrar al editor de días del Cuadro y a los emparejamientos de hospitalarios porque compartía el permiso de "ver como admin"; ahora solo puede consultar.'
+  ]},
   {v:'2.35.1',n:'Consulta externa con hospitalarios: no mezclar interconsultas',f:'2026-11-12',cambios:[
     'Corregido: cuando el mismo día el anestesiólogo tenía emparejados al hospitalario de interconsultas (p. ej. Miguel, 6 h mañana) y a un hospitalario de consulta externa (p. ej. Alexander, CE Completa 12 h), las 6 h de interconsulta se contaban como un consultorio más y se perdían: al anestesiólogo solo le sumaban 12 h en lugar de 18 h.',
     'Ahora los consultorios se calculan solo con los hospitalarios que atienden consulta externa, y las horas de interconsulta de contrato (lunes a viernes) se suman aparte con su propia línea. Ej. 18 nov: CE de Fabián 12 h + consultorio de Alexander 12 h + interconsulta de Miguel 6 h = 30 h.'
@@ -2447,6 +2452,25 @@ function nombreIME(doc,u,fallback){
   return (u&&u.imeNombre)||fallback;
 }
 function getP(id){return APP.perfiles.find(p=>p.id===id);}
+// v2.35.2 — Guardia de escritura: solo el administrador (no viewer) modifica agendas
+// de otros, distribucion, verificaciones y usuarios. Se valida dentro de cada funcion
+// de guardado, no solo ocultando botones (que se pueden saltar desde la consola).
+function soloAdmin(msg){
+  if(APP.canEdit) return true;
+  toast(msg||'Solo el administrador puede modificar esto','info');
+  return false;
+}
+// Un usuario ordinario solo escribe SU propia disponibilidad, de hoy en adelante,
+// en un trimestre abierto. El viewer (solo lectura) y jefe de enfermeria no escriben.
+function puedeEscribirMiDisp(iso){
+  if(APP.canEdit) return true;
+  const rol=APP.perfil?.rol;
+  if(!APP.perfil?.activo||rol==='viewer'||rol==='jefe_enfermeria'){toast('Tu perfil es de solo lectura','info');return false;}
+  if(!iso||iso<toISO(new Date())){toast('Ese dia ya paso — solo el administrador puede modificarlo','info');return false;}
+  const dt=new Date(iso+'T12:00:00');const tri=triDeM(dt.getMonth(),dt.getFullYear());
+  if(!tri||!triActivo(tri)){toast('Trimestre no activo aun','info');return false;}
+  return true;
+}
 function dKey(uid,iso){return uid+'_'+iso;}
 function getDisp(uid,iso){return APP.disp[dKey(uid,iso)]||null;}
 function triActivo(t){
@@ -3510,6 +3534,7 @@ function mdmRenderGrid(){
 let _medT=new Set(), _medExtras=[];
 
 function medAbrirDia(uid,iso){
+  if(!soloAdmin('Solo el administrador puede editar agendas de otros anestesiólogos')) return;
   const dt=new Date(iso+'T12:00:00');
   const DN=['Dom','Lun','Mar','Mie','Jue','Vie','Sab'];
   document.getElementById('med-titulo').textContent=dt.getDate()+' de '+MESES_FULL[dt.getMonth()];
@@ -3710,6 +3735,7 @@ function medLimpiar(){
 }
 
 async function medBorrarDia(){
+  if(!soloAdmin('Solo el administrador puede borrar agendas de otros anestesiólogos')) return;
   const uid=document.getElementById('med-uid').value;
   const iso=document.getElementById('med-iso').value;
   const doc=getP(uid);
@@ -3738,6 +3764,7 @@ async function medBorrarDia(){
 }
 
 async function medGuardar(){
+  if(!soloAdmin('Solo el administrador puede modificar agendas de otros anestesiólogos')) return;
   const uid=document.getElementById('med-uid').value;
   const iso=document.getElementById('med-iso').value;
   const obs=document.getElementById('med-obs').value.trim();
@@ -3987,7 +4014,7 @@ function chipAcompCal(ha){
 }
 // Escribe en distribuciones.cfg del dia (crea la fila si no existe). fn(cfg) modifica la copia.
 async function guardarCfgDia(iso,fn){
-  if(!APP.isAdmin){toast('Solo el administrador puede editar esto','info');return false;}
+  if(!soloAdmin('Solo el administrador puede editar esto')) return false;
   try{if(typeof cargarDistribucion==='function') await cargarDistribucion(iso);}catch(e){}
   const ex=APP.dist[iso];
   const cfg={...((ex&&ex.cfg)||{salas:6,consultorios:2,interconsultas:1})};
@@ -5051,7 +5078,7 @@ function exportarPDFDoc(){
 let _mecT=new Set(), _mecExtras=[];
 
 function cuadroEditarDia(uid, iso){
-  if(!APP.isAdmin) return;
+  if(!soloAdmin()) return;
   const doc=getP(uid);
   if(!doc) return;
   const dt=new Date(iso+'T12:00:00');
@@ -5115,6 +5142,7 @@ function mecLimpiar(){
 }
 
 async function mecGuardar(){
+  if(!soloAdmin('Solo el administrador puede modificar agendas de otros anestesiólogos')) return;
   const uid=document.getElementById('mec-uid').value;
   const iso=document.getElementById('mec-iso').value;
   const obs=document.getElementById('mec-obs').value.trim();
@@ -5238,6 +5266,7 @@ function abrirDisp(iso){
   const dt=new Date(iso+'T12:00:00');
   const tri=triDeM(dt.getMonth(),dt.getFullYear());
   if(!tri||!triActivo(tri)){toast('Trimestre no activo aun','info');return;}
+  if(APP.perfil?.rol==='viewer'||APP.perfil?.rol==='jefe_enfermeria'){toast('Tu perfil es de solo lectura','info');return;}
   // Una vez cumplido el dia, solo el administrador puede modificar la disponibilidad registrada
   if(!APP.canEdit && iso<toISO(new Date())){
     toast('Ese dia ya paso — solo el administrador puede modificar disponibilidad de dias anteriores.','info');
@@ -5281,6 +5310,7 @@ function dispLimpiar(){
 
 async function dispBorrarDia(){
   if(!dispDia) return;
+  if(!puedeEscribirMiDisp(dispDia)) return;
   const dt=new Date(dispDia+'T12:00:00');
   const lbl=dt.getDate()+' de '+MESES_FULL[dt.getMonth()];
   if(!confirm(`¿Borrar completamente tu registro del ${lbl}?\n\nEl día quedará en blanco y podrás volver a registrar disponibilidad.`)) return;
@@ -5336,6 +5366,7 @@ async function guardarDisp(){
     return;
   }
 
+  if(!puedeEscribirMiDisp(dispDia)){if(btn){btn.disabled=false;btn.textContent='Guardar';}return;}
   const uid=APP.user.id;
   const iso=dispDia;
   const key=dKey(uid,iso);
@@ -6692,6 +6723,7 @@ async function eliminarPdfStorage(path){
   }
 }
 async function eliminarVerificacion(idx){
+  if(!soloAdmin()) return;
   const r=_histVerifRegistros&&_histVerifRegistros[idx];
   if(!r) return;
   if(!confirm('¿Eliminar esta verificación del '+r.fecha+' ('+(r.nombre_archivo_pdf||'sin nombre')+')? Esta acción no se puede deshacer.')) return;
@@ -6702,6 +6734,7 @@ async function eliminarVerificacion(idx){
   abrirHistorialVerif();
 }
 async function guardarVerificacionPdf(filas){
+  if(!soloAdmin('Solo el administrador puede guardar verificaciones')) return;
   try{
     const okCount=filas.filter(f=>f.estado==='ok').length;
     // Se guarda una copia del PDF en Storage para poder consultarlo despues desde el historial.
@@ -6758,6 +6791,7 @@ async function abrirHistorialVerif(){
 }
 
 async function guardarDist(){
+  if(!soloAdmin('Solo el administrador puede modificar la distribución de salas')) return;
   const cfg={salas:parseInt(document.getElementById('cfg-salas').value),consultorios:parseInt(document.getElementById('cfg-cons').value),interconsultas:parseInt(document.getElementById('cfg-inter').value),oncologia:parseInt(document.getElementById('cfg-onco')?.value||0),sedaciones:parseInt(document.getElementById('cfg-sed')?.value||0),urgencias:parseInt(document.getElementById('cfg-urg')?.value||0)};
   const btn=document.getElementById('btn-save-dist');if(btn)btn.disabled=true;
   const ex=APP.dist[distDate];
@@ -7048,12 +7082,14 @@ async function toggleViewerAdmin(id, nuevoRol){
 }
 
 async function aprobarU(id){
+  if(!soloAdmin()) return;
   const{data,error}=await dbWrite('PATCH','perfiles?id=eq.'+id,{activo:true});
   if(error){toast('Error: '+error.message,'error');return;}
   if(!data){toast('⚠️ No se guardo el cambio (posible RLS). Ejecuta migracion_perfiles_admin_rls.sql','error');return;}
   toast('Usuario activado','success');await cargarPerfiles();renderUsuarios();
 }
 async function rechazarU(id){
+  if(!soloAdmin()) return;
   if(!confirm('Rechazar esta solicitud?'))return;
   await db.from('perfiles').delete().eq('id',id);
   toast('Solicitud rechazada','info');await cargarPerfiles();renderUsuarios();
@@ -8417,7 +8453,7 @@ document.addEventListener('click',e=>{
 // Delegación de eventos para tabla del cuadro — más confiable en Safari
 document.addEventListener('click', e=>{
   const td = e.target.closest('td[data-uid]');
-  if(td && APP.isAdmin){
+  if(td && APP.canEdit){
     abrirEditorDoc(td);
   }
 });
