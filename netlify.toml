@@ -1,0 +1,28 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+# Página del enlace de "Recuperar contraseña" (la app es un solo index.html)
+[[redirects]]
+  from = "/restablecer"
+  to = "/index.html"
+  status = 200
+
+# No publicar el código de las funciones ni los scripts SQL como archivos estáticos
+[[redirects]]
+  from = "/netlify/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/supabase/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/netlify.toml"
+  to = "/404"
+  status = 404
+  force = true

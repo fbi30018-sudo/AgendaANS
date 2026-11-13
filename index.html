@@ -124,7 +124,7 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
   letter-spacing:1px;margin:16px 0 10px;border-top:1px solid var(--border);padding-top:12px;}
 
 /* ── PENDING ── */
-#s-pending{align-items:center;justify-content:center;background:var(--bg);}
+#s-pending,#s-reset{align-items:center;justify-content:center;background:var(--bg);}
 .pending-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);
   padding:48px;max-width:400px;text-align:center;}
 .pending-card h2{font-family:var(--serif);font-size:22px;font-weight:300;color:var(--ink);margin:16px 0 10px;}
@@ -544,6 +544,35 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
   pointer-events:none;color:#fff;}
 #toast.show{opacity:1;transform:translateY(0);}
 
+/* v2.37.0 — Mi perfil y Usuarios por secciones */
+.pf-grid .field label{color:#4e6c8a;}
+.pf-grid .field input,.pf-grid .field select{background:#fff;border:1px solid #c8d4e0;color:#0d1f35;}
+.pf-grid .field input:focus,.pf-grid .field select:focus{border-color:#1a5cbf;box-shadow:0 0 0 2px rgba(26,92,191,.1);}
+.pf-grid .field input::placeholder{color:#9ab0c8;}
+.pf-grid b,.u-sesion b{color:#0d1f35!important;}
+.pf-grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:14px;align-items:start;}
+@media(max-width:900px){.pf-grid{grid-template-columns:1fr;}}
+.pf-sec{font-family:var(--mono);font-size:9px;color:#1a5cbf;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;}
+.pf-ayuda{font-family:var(--mono);font-size:9.5px;color:#6b7f95;line-height:1.5;}
+.pf-grid .field input[readonly],.pf-grid .field select:disabled{background:#f3f6fa;color:#4e6c8a;}
+.u-hdr-fijo{position:sticky;top:-20px;z-index:5;background:#fff;border:1px solid #c8d4e0;border-radius:var(--r);padding:12px 16px;margin-bottom:14px;box-shadow:0 2px 6px rgba(13,31,53,.06);}
+@media(max-width:768px){.u-hdr-fijo{top:-14px;}}
+.u-buscar{display:flex;align-items:center;gap:6px;border:1px solid #c8d4e0;border-radius:6px;padding:0 10px;background:#fff;min-width:240px;flex:1;max-width:420px;}
+.u-buscar svg{width:14px;height:14px;color:#8aa8c0;flex-shrink:0;}
+.u-buscar input{border:0;outline:0;background:transparent;padding:8px 0;font-size:13px;width:100%;color:#0d1f35;}
+.u-sec{border:1px solid #c8d4e0;border-radius:var(--r);margin-bottom:12px;background:#f7f9fc;overflow:hidden;}
+.u-sec>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px 14px;font-family:var(--serif);font-size:16px;font-weight:300;color:#0d1f35;user-select:none;}
+.u-sec>summary::-webkit-details-marker{display:none;}
+.u-sec>summary::before{content:'▸';font-size:11px;color:#8aa8c0;transition:transform .15s;}
+.u-sec[open]>summary::before{transform:rotate(90deg);}
+.u-cnt{font-family:var(--mono);font-size:10px;background:#eef3f9;color:#1a5cbf;border-radius:10px;padding:1px 8px;}
+.u-sec .doc-list{padding:0 10px 10px;}
+.u-sub{font-family:var(--mono);font-size:9px;color:#4e6c8a;text-transform:uppercase;letter-spacing:.8px;margin:8px 4px 6px;display:flex;gap:6px;align-items:center;}
+.u-fila{cursor:pointer;}
+.u-fila:hover{background:#f6f9fc;}
+.u-sesion{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed #d5dfea;}
+.u-sesion:last-child{border-bottom:0;}
+
 @media print{
   @page{size:A4 landscape;margin:6mm;}
 
@@ -817,6 +846,9 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
         <input type="password" id="login-pwd" placeholder="••••••••" autocomplete="current-password"
           onkeydown="if(event.key==='Enter')doLogin()">
       </div>
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink2);margin:2px 0 10px;cursor:pointer;">
+        <input type="checkbox" id="login-keep" checked style="width:auto;margin:0;"> Mantener sesión iniciada
+      </label>
       <div id="login-err" class="err-msg"></div>
       <button class="btn-primary" id="btn-login" onclick="doLogin()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -865,10 +897,14 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
       <div class="sec-sep">Acceso al sistema</div>
       <div class="field">
         <label>Correo electronico o Numero de cedula</label>
-        <input type="text" id="reg-email" placeholder="correo@ejemplo.com  o  12345678" autocomplete="username">
+        <input type="text" id="reg-email" placeholder="correo@ejemplo.com  o  12345678" autocomplete="username" oninput="document.getElementById('reg-correo-f').style.display=this.value.includes('@')?'none':''">
         <div style="font-family:var(--mono);font-size:9px;color:var(--ink3);margin-top:4px;">
           Puedes usar tu correo personal <b>o</b> tu número de cédula como usuario de acceso.
         </div>
+      </div>
+      <div class="field" id="reg-correo-f">
+        <label>Correo electrónico (para recuperar tu contraseña)</label>
+        <input type="email" id="reg-correo" placeholder="correo@ejemplo.com" autocomplete="email">
       </div>
       <div class="grid2">
         <div class="field"><label>Contrasena</label><input type="password" id="reg-pwd" placeholder="Min. 8 caracteres"></div>
@@ -900,6 +936,21 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
   </div>
 </div>
 
+<!-- v2.37.0 — Restablecer contraseña (enlace del correo) -->
+<div id="s-reset" class="screen">
+  <div class="pending-card" style="max-width:380px;text-align:left;">
+    <h2 style="text-align:center;">Nueva contraseña</h2>
+    <p id="rs-sub" style="text-align:center;margin-bottom:14px;">Escribe tu nueva contraseña para AgendaANS.</p>
+    <div id="rs-form">
+      <div class="field"><label>Nueva contraseña</label><input type="password" id="rs-pwd" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></div>
+      <div class="field"><label>Confirmar contraseña</label><input type="password" id="rs-pwd2" autocomplete="new-password" onkeydown="if(event.key==='Enter')guardarRestablecer()"></div>
+      <div id="rs-err" class="err-msg"></div>
+      <button class="btn-primary" id="btn-rs" onclick="guardarRestablecer()">Guardar y entrar</button>
+    </div>
+    <div style="text-align:center;margin-top:12px;"><span class="link" style="display:inline;" onclick="history.replaceState(null,'','/');show('s-login')">Volver al inicio de sesión</span></div>
+  </div>
+</div>
+
 <!-- ════════════ APP ════════════ -->
 <div id="s-app" class="screen">
   <!-- HEADER -->
@@ -928,7 +979,7 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
       </div>
     </div>
     <div class="hdr-r">
-      <div style="display:flex;align-items:center;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="abrirPerfil()" title="Mi perfil">
         <div class="hdr-av" id="hdr-av">FG</div>
         <div>
           <div class="hdr-nm" id="hdr-nm">—</div>
@@ -960,6 +1011,9 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
         </button>
         <button class="nav-item" onclick="navTo('disponibilidad')" data-v="disponibilidad">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Mi Disponibilidad
+        </button>
+        <button class="nav-item" onclick="abrirPerfil()" data-v="perfil" id="nav-perfil">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Mi perfil
         </button>
       </div>
       <div class="sb-sec">
@@ -1501,13 +1555,12 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
 
       <!-- USUARIOS -->
       <div id="view-usuarios" class="view">
-        <div class="page-hdr">
-          <div><h2>Usuarios</h2><p>Anestesiologos activos y solicitudes pendientes</p></div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <div class="emp-tabs" id="u-emp-tabs">
-              <button class="emp-tab all" onclick="setUFiltro('all',this)">Todos</button>
-              <button class="emp-tab" onclick="setUFiltro('SEDAR',this)">SEDAR</button>
-              <button class="emp-tab" onclick="setUFiltro('Colsubsidio',this)">Colsubsidio</button>
+        <div class="page-hdr u-hdr-fijo">
+          <div><h2>Usuarios</h2><p>Anestesiólogos, administrativos y hospitalarios</p></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:1;justify-content:flex-end;">
+            <div class="u-buscar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="search" id="u-buscar" placeholder="Buscar por nombre, cédula, correo o teléfono" oninput="renderListaUsuarios()" autocomplete="off">
             </div>
             <button class="btn prim sm" onclick="crearSlotIME()" id="btn-crear-ime" style="display:none;">
               + Slot IME
@@ -1518,13 +1571,91 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
           <h3 style="font-family:var(--serif);font-size:16px;font-weight:300;color:#0d1f35;">Solicitudes pendientes</h3>
           <div style="font-family:var(--mono);font-size:9px;color:#4e6c8a;background:#f0f4f9;padding:4px 10px;border-radius:4px;">
-            Los nuevos registros requieren confirmación de correo + activación manual
+            Los nuevos registros requieren activación manual
           </div>
         </div>
           <div class="doc-list" id="pendientes-list"></div>
         </div>
-        <h3 style="font-family:var(--serif);font-size:16px;font-weight:300;color:#0d1f35;margin-bottom:10px;">Usuarios activos</h3>
-        <div class="doc-list" id="usuarios-list"></div>
+        <div id="usuarios-list"></div>
+      </div>
+
+      <!-- v2.37.0 — MI PERFIL / PERFIL DE UN USUARIO (vista del administrador) -->
+      <div id="view-perfil" class="view">
+        <div class="page-hdr">
+          <div><h2 id="pf-titulo">Mi perfil</h2><p id="pf-sub">—</p></div>
+          <div class="page-actions">
+            <button class="btn sm" id="pf-volver" style="display:none;" onclick="navTo('usuarios')">← Usuarios</button>
+          </div>
+        </div>
+        <div class="pf-grid">
+          <div class="panel-box" style="padding:16px;">
+            <div class="pf-sec">Datos personales</div>
+            <input type="hidden" id="pf-id">
+            <div class="grid2">
+              <div class="field"><label>Nombre(s)</label><input type="text" id="pf-nombre"></div>
+              <div class="field"><label>Apellido(s)</label><input type="text" id="pf-apellidos"></div>
+            </div>
+            <div class="grid2">
+              <div class="field"><label>Cédula / CC</label><input type="text" id="pf-cc"></div>
+              <div class="field"><label>Teléfono</label><input type="tel" id="pf-tel"></div>
+            </div>
+            <div class="field"><label>Correo electrónico</label><input type="email" id="pf-email" placeholder="correo@ejemplo.com">
+              <div class="pf-ayuda">Aquí llega el enlace de recuperación de contraseña. Puedes seguir entrando con tu cédula.</div></div>
+            <div class="grid2">
+              <div class="field"><label>Registro médico</label><input type="text" id="pf-rm"></div>
+              <div class="field"><label>Especialidad</label>
+                <select id="pf-esp">
+                  <option value="">Seleccionar...</option>
+                  <option>Anestesia General</option><option>Anestesia Pediatrica</option>
+                  <option>Anestesia Pediatrica y Adultos</option><option>Anestesia Cardiovascular</option>
+                  <option>Anestesia Regional</option><option>Anestesia Obstetrica</option>
+                  <option>UCI / Medicina Critica</option><option>Otra</option>
+                </select>
+              </div>
+            </div>
+            <div id="pf-admin-campos" style="display:none;">
+              <div class="pf-sec" style="margin-top:6px;">Clasificación (solo administrador)</div>
+              <div class="grid2">
+                <div class="field"><label>Sección</label>
+                  <select id="pf-seccion"><option value="anestesiologo">Anestesiólogos</option><option value="administrativo">Administrativos</option><option value="hospitalario">Hospitalarios</option></select></div>
+                <div class="field"><label>Grupo (anestesiólogos)</label>
+                  <select id="pf-grupo"><option value="SEDAR">SEDAR</option><option value="Colsubsidio">Colsubsidio</option><option value="IME">IME</option><option value="Consulta externa">Consulta externa</option></select></div>
+              </div>
+              <div class="grid2">
+                <div class="field"><label>Empresa</label>
+                  <select id="pf-empresa"><option value="SEDAR">SEDAR</option><option value="Colsubsidio">Colsubsidio</option><option value="IME">IME</option></select></div>
+                <div class="field"><label>Rol</label>
+                  <select id="pf-rol"><option value="anestesiologo">Anestesiologo</option><option value="admin">Administrador</option><option value="ime">IME (slot externo)</option><option value="interconsulta">Hospitalario de interconsultas (contrato OPS)</option><option value="hospitalario">Hospitalario de consulta externa (sin contrato)</option><option value="viewer">Visualizador administrativo</option><option value="jefe_enfermeria">Jefe Enfermeria Colsubsidio (slot rotacional)</option></select></div>
+              </div>
+              <div class="field"><label>Estado de la cuenta</label>
+                <select id="pf-activo"><option value="true">✅ Activo — puede ingresar</option><option value="false">⏸ Suspendido / Pendiente — no puede ingresar</option></select></div>
+            </div>
+            <div id="pf-solo-ver" class="pf-ayuda" style="display:none;"></div>
+            <div id="pf-err" class="err-msg"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+              <button class="btn prim" id="pf-guardar" onclick="guardarPerfil()">Guardar cambios</button>
+              <button class="btn dang sm" id="pf-eliminar" style="display:none;margin-left:auto;" onclick="eliminarDesdePerfil()">Eliminar usuario</button>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="panel-box" style="padding:16px;" id="pf-box-pwd">
+              <div class="pf-sec">Contraseña</div>
+              <div class="pf-ayuda" id="pf-pwd-ayuda" style="margin-bottom:10px;">Nadie, ni el administrador, puede ver tu contraseña.</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn prim sm" onclick="pfCambiarPwd()">Cambiar contraseña</button>
+                <button class="btn sm" id="pf-btn-recup" onclick="pfRecuperarPwd()">Recuperar contraseña</button>
+              </div>
+            </div>
+            <div class="panel-box" style="padding:16px;">
+              <div class="pf-sec">Sesiones activas</div>
+              <div id="pf-sesiones" class="pf-ayuda">—</div>
+            </div>
+            <div class="panel-box" style="padding:16px;display:none;" id="pf-box-audit">
+              <div class="pf-sec">Historial de cambios</div>
+              <div id="pf-audit" class="pf-ayuda">—</div>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div><!-- /main -->
@@ -1599,6 +1730,46 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
         Guardar
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- v2.37.0 — MODAL CAMBIAR CONTRASEÑA (propia) -->
+<div class="overlay" id="modal-pwd">
+  <div class="modal" style="width:400px;">
+    <div class="modal-hdr">
+      <h3 id="mp-titulo">Cambiar contraseña</h3>
+      <button class="modal-x" id="mp-x" onclick="closeModal('modal-pwd')">✕</button>
+    </div>
+    <div id="mp-aviso" class="pf-ayuda" style="display:none;margin-bottom:10px;color:#b45309;">El administrador te asignó una contraseña temporal. Crea una nueva para continuar.</div>
+    <div class="field" id="mp-actual-f"><label>Contraseña actual</label><input type="password" id="mp-actual" autocomplete="current-password"></div>
+    <div class="field"><label>Nueva contraseña</label><input type="password" id="mp-nueva" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></div>
+    <div class="field"><label>Confirmar nueva contraseña</label><input type="password" id="mp-nueva2" autocomplete="new-password" onkeydown="if(event.key==='Enter')guardarCambiarPwd()"></div>
+    <div class="pf-ayuda" style="margin-bottom:8px;">Al cambiarla se cierran tus sesiones en otros dispositivos; esta queda abierta.</div>
+    <div id="mp-err" class="err-msg"></div>
+    <div class="modal-actions" style="justify-content:flex-end;">
+      <button class="btn" id="mp-cancel" onclick="closeModal('modal-pwd')">Cancelar</button>
+      <button class="btn prim" id="mp-ok" onclick="guardarCambiarPwd()">Cambiar contraseña</button>
+    </div>
+  </div>
+</div>
+
+<!-- v2.37.0 — MODAL CONTRASEÑA TEMPORAL (administrador) -->
+<div class="overlay" id="modal-pwd-admin">
+  <div class="modal" style="width:420px;">
+    <div class="modal-hdr">
+      <h3>Contraseña temporal</h3>
+      <button class="modal-x" onclick="closeModal('modal-pwd-admin')">✕</button>
+    </div>
+    <input type="hidden" id="ma-id">
+    <div class="pf-ayuda" id="ma-quien" style="margin-bottom:10px;">—</div>
+    <div class="field"><label>Contraseña temporal</label>
+      <div style="display:flex;gap:6px;"><input type="text" id="ma-pwd" autocomplete="off" style="flex:1;"><button class="btn sm" onclick="document.getElementById('ma-pwd').value=genPwdTemporal()">Generar</button></div></div>
+    <div class="pf-ayuda" style="margin-bottom:8px;">Compártela con el usuario por un canal privado. Al ingresar, la app le exigirá crear una nueva. Sus sesiones abiertas se cierran.</div>
+    <div id="ma-err" class="err-msg"></div>
+    <div class="modal-actions" style="justify-content:flex-end;">
+      <button class="btn" onclick="closeModal('modal-pwd-admin')">Cancelar</button>
+      <button class="btn prim" id="ma-ok" onclick="guardarPwdAdmin()">Asignar contraseña</button>
     </div>
   </div>
 </div>
@@ -1969,7 +2140,7 @@ let _authCBs = [];
 // no vuelve a habilitarse nunca. Este envoltorio fuerza que toda peticion al
 // backend responda o falle dentro de un tiempo razonable, para que la app
 // siempre pueda avisar el error y dejar reintentar.
-function fetchConTimeout(url,opts,ms){
+function _fetchRaw(url,opts,ms){
   ms=ms||15000;
   const ctrl=new AbortController();
   const t=setTimeout(()=>ctrl.abort(),ms);
@@ -1983,9 +2154,49 @@ function fetchConTimeout(url,opts,ms){
     .finally(()=>clearTimeout(t));
 }
 
-function _lsGet(){ try{ return JSON.parse(localStorage.getItem(SB_LS)); }catch(e){ return null; } }
-function _lsSave(s){ try{ localStorage.setItem(SB_LS,JSON.stringify(s)); }catch(e){} }
-function _lsClear(){ try{ localStorage.removeItem(SB_LS); }catch(e){} }
+// v2.37.0 — Sesion persistente. Toda peticion a Supabase pasa por aqui:
+//  1) si la peticion usa el token del usuario y este vence en <60 s, se renueva ANTES de enviarla;
+//  2) si aun asi responde 401 ("JWT expired"), se renueva y se repite UNA sola vez.
+// Solo si la renovacion es rechazada por el servidor (token revocado) se vuelve al login.
+// Antes: el token solo se renovaba al abrir la app; con la app abierta >1 h todas las
+// consultas fallaban en silencio (p. ej. Distribucion Salas mostraba "0 disponibles").
+function _conToken(opts){
+  const h=Object.assign({},opts.headers||{});
+  h['Authorization']='Bearer '+_token();
+  return Object.assign({},opts,{headers:h});
+}
+async function fetchConTimeout(url,opts,ms){
+  opts=opts||{};
+  const esAuthPublica=url.indexOf('/auth/v1/token')>=0||url.indexOf('/auth/v1/recover')>=0||url.indexOf('/auth/v1/signup')>=0;
+  const usaSesion=!esAuthPublica&&url.indexOf(SUPA_URL)===0&&!!_sess?.refresh_token
+    &&opts.headers&&opts.headers['Authorization']==='Bearer '+_sess.access_token;
+  if(usaSesion&&_sess.expires_at&&Date.now()/1000>_sess.expires_at-60){
+    await _refrescar();
+    opts=_conToken(opts);
+  }
+  let r=await _fetchRaw(url,opts,ms);
+  if(usaSesion&&r.status===401){
+    const ok=await _refrescar(true);
+    if(ok) r=await _fetchRaw(url,_conToken(opts),ms);
+  }
+  return r;
+}
+
+// Almacenamiento: "Mantener sesion iniciada" (por defecto) → localStorage, sobrevive a
+// cerrar el navegador. Sin la casilla → sessionStorage, termina al cerrar la pestaña.
+const SB_PERSIST='sb-ans-persist';
+function _persistir(){ try{ return localStorage.getItem(SB_PERSIST)!=='0'; }catch(e){ return true; } }
+function _lsGet(){
+  try{ const s=sessionStorage.getItem(SB_LS); if(s) return JSON.parse(s); }catch(e){}
+  try{ return JSON.parse(localStorage.getItem(SB_LS)); }catch(e){ return null; }
+}
+function _lsSave(s){
+  try{
+    if(_persistir()){ localStorage.setItem(SB_LS,JSON.stringify(s)); sessionStorage.removeItem(SB_LS); }
+    else { sessionStorage.setItem(SB_LS,JSON.stringify(s)); localStorage.removeItem(SB_LS); }
+  }catch(e){}
+}
+function _lsClear(){ try{ localStorage.removeItem(SB_LS); }catch(e){} try{ sessionStorage.removeItem(SB_LS); }catch(e){} }
 function _emit(ev,sess){ _authCBs.forEach(fn=>{ try{fn(ev,sess);}catch(e){} }); }
 
 function _token(){
@@ -1994,14 +2205,66 @@ function _token(){
   return SUPA_KEY;
 }
 
-function _mkSess(d){
-  let user=d.user;
+function _mkSess(d,prev){
+  let user=d.user||prev?.user;
   if(!user&&d.access_token){
-    try{user={id:JSON.parse(atob(d.access_token.split('.')[1])).sub};}catch(e){}
+    try{const c=JSON.parse(atob(d.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));user={id:c.sub,email:c.email};}catch(e){}
   }
   return {access_token:d.access_token,refresh_token:d.refresh_token,
-    expires_at:Math.floor(Date.now()/1000)+(d.expires_in||3600),user};
+    expires_at:d.expires_at||Math.floor(Date.now()/1000)+(d.expires_in||3600),user};
 }
+
+// Renovacion de token: una sola a la vez (varias consultas simultaneas comparten la misma).
+let _refreshP=null, _renovTimer=null;
+function _refrescar(){
+  if(_refreshP) return _refreshP;
+  _refreshP=(async()=>{
+    const base=_sess||_lsGet();
+    // Otra pestaña pudo haberlo renovado ya (los refresh tokens rotan)
+    const st=_lsGet();
+    if(st&&base&&st.refresh_token!==base.refresh_token&&st.expires_at>Date.now()/1000+60){
+      _sess=st;_programarRenovacion();return true;
+    }
+    if(!base?.refresh_token) return false;
+    let r;
+    try{
+      r=await _fetchRaw(SUPA_URL+'/auth/v1/token?grant_type=refresh_token',{
+        method:'POST',headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+        body:JSON.stringify({refresh_token:base.refresh_token})
+      },15000);
+    }catch(e){ console.warn('Renovacion de sesion: sin conexion, se reintenta luego'); return false; }
+    if(r.ok){
+      const d=await r.json();const ns=_mkSess(d,base);_lsSave(ns);_sess=ns;
+      _programarRenovacion();_emit('TOKEN_REFRESHED',ns);return true;
+    }
+    if(r.status===400||r.status===401||r.status===403){
+      const st2=_lsGet();
+      if(st2&&st2.refresh_token!==base.refresh_token&&st2.expires_at>Date.now()/1000){_sess=st2;_programarRenovacion();return true;}
+      // Token de renovacion revocado o vencido (Salir en otro lado, admin cerro la sesion, cambio de contraseña)
+      _lsClear();_sess=null;clearTimeout(_renovTimer);_emit('SIGNED_OUT',{motivo:'expirada'});return false;
+    }
+    return false; // 429/5xx: transitorio, se conserva la sesion
+  })().finally(()=>{_refreshP=null;});
+  return _refreshP;
+}
+function _programarRenovacion(){
+  clearTimeout(_renovTimer);
+  if(!_sess?.expires_at) return;
+  const ms=Math.max(5000,(_sess.expires_at-Date.now()/1000-300)*1000);
+  _renovTimer=setTimeout(()=>_refrescar(),Math.min(ms,2000000000));
+}
+function _revisarSesion(){
+  if(_sess?.expires_at&&Date.now()/1000>_sess.expires_at-300) _refrescar();
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') _revisarSesion(); });
+window.addEventListener('online',_revisarSesion);
+window.addEventListener('focus',_revisarSesion);
+window.addEventListener('storage',e=>{
+  if(e.key!==SB_LS) return;
+  const s=_lsGet();
+  if(s){ _sess=s; _programarRenovacion(); }
+  else if(_sess){ _sess=null; clearTimeout(_renovTimer); _emit('SIGNED_OUT',{motivo:'otra_pestana'}); }
+});
 
 const auth={
   onAuthStateChange(fn){_authCBs.push(fn);},
@@ -2009,17 +2272,20 @@ const auth={
   async getSession(){
     const s=_lsGet();
     if(!s) return {data:{session:null}};
+    _sess=s;
     if(s.expires_at&&Date.now()/1000>s.expires_at-120){
-      try{
-        const r=await fetchConTimeout(SUPA_URL+'/auth/v1/token?grant_type=refresh_token',{
-          method:'POST',headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
-          body:JSON.stringify({refresh_token:s.refresh_token})
-        });
-        if(r.ok){const d=await r.json();const ns=_mkSess(d);_lsSave(ns);_sess=ns;return {data:{session:ns}};}
-      }catch(e){}
-      _lsClear();_sess=null;return {data:{session:null}};
+      await _refrescar();
+      // Si fallo por red se conserva la sesion guardada: las consultas reintentan la renovacion.
+      if(!_sess) return {data:{session:null}};
     }
-    _sess=s;return {data:{session:s}};
+    _programarRenovacion();
+    return {data:{session:_sess}};
+  },
+
+  // Guarda una sesion recibida (login por cedula en el servidor o enlace de recuperacion)
+  _setSession(d){
+    const sess=_mkSess(d);_lsSave(sess);_sess=sess;_programarRenovacion();
+    _emit('SIGNED_IN',sess);return sess;
   },
 
   async signInWithPassword({email,password}){
@@ -2030,8 +2296,7 @@ const auth={
       });
       const d=await r.json();
       if(!r.ok) return {data:null,error:{message:d.error_description||d.msg||'Credenciales incorrectas'}};
-      const sess=_mkSess(d);_lsSave(sess);_sess=sess;
-      _emit('SIGNED_IN',sess);
+      const sess=this._setSession(d);
       return {data:{user:sess.user,session:sess},error:null};
     }catch(e){return {data:null,error:{message:e.message}};}
   },
@@ -2048,16 +2313,55 @@ const auth={
     }catch(e){return {data:null,error:{message:e.message}};}
   },
 
+  // Salir: revoca en el servidor la sesion de ESTE dispositivo (scope=local), no las demas.
   async signOut(){
-    try{await fetchConTimeout(SUPA_URL+'/auth/v1/logout',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_token()}});}catch(e){}
-    _lsClear();_sess=null;_emit('SIGNED_OUT',null);
+    if(_sess?.expires_at&&Date.now()/1000>_sess.expires_at-60) await _refrescar();
+    try{await fetchConTimeout(SUPA_URL+'/auth/v1/logout?scope=local',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_token()}});}catch(e){}
+    clearTimeout(_renovTimer);_lsClear();_sess=null;_emit('SIGNED_OUT',null);
+  },
+
+  // Cierra las sesiones del usuario en sus otros dispositivos y mantiene esta.
+  async signOutOthers(){
+    try{await fetchConTimeout(SUPA_URL+'/auth/v1/logout?scope=others',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_token()}});}catch(e){}
+  },
+
+  async updateUser(attrs){
+    try{
+      const r=await fetchConTimeout(SUPA_URL+'/auth/v1/user',{
+        method:'PUT',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_token(),'Content-Type':'application/json'},
+        body:JSON.stringify(attrs)
+      });
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) return {error:{message:d.msg||d.message||d.error_description||r.statusText,code:d.error_code||d.code}};
+      if(_sess){_sess.user=Object.assign({},_sess.user,{id:d.id,email:d.email});_lsSave(_sess);}
+      return {data:{user:d},error:null};
+    }catch(e){return {error:{message:e.message}};}
   },
 
   async resetPasswordForEmail(email){
-    try{await fetchConTimeout(SUPA_URL+'/auth/v1/recover',{method:'POST',headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},body:JSON.stringify({email})});}catch(e){}
+    try{
+      const r=await fetchConTimeout(SUPA_URL+'/auth/v1/recover?redirect_to='+encodeURIComponent(location.origin+'/restablecer'),{
+        method:'POST',headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},body:JSON.stringify({email})
+      });
+      if(!r.ok){const d=await r.json().catch(()=>({}));return {error:{message:d.msg||d.message||'No se pudo enviar'}};}
+    }catch(e){return {error:{message:e.message}};}
     return {error:null};
   }
 };
+
+// Funciones del servidor (Netlify) — acciones que requieren la clave de servicio
+async function apiServidor(path,body,conSesion){
+  const h={'Content-Type':'application/json'};
+  if(conSesion) h['Authorization']='Bearer '+_token();
+  try{
+    let r=await _fetchRaw(path,{method:'POST',headers:h,body:JSON.stringify(body)},20000);
+    if(conSesion&&r.status===401){ if(await _refrescar()){ h['Authorization']='Bearer '+_token(); r=await _fetchRaw(path,{method:'POST',headers:h,body:JSON.stringify(body)},20000);} }
+    const d=await r.json().catch(()=>null);
+    if(!d) return {error:{message:r.status===404?'Función del servidor no disponible (¿despliegue sin funciones?)':'Respuesta inválida del servidor ('+r.status+')'}};
+    if(!r.ok||d.error) return {error:{message:d.error||d.error_description||d.msg||('Error '+r.status)}};
+    return {data:d,error:null};
+  }catch(e){return {error:{message:e.message}};}
+}
 
 // DB query builder
 class Q{
@@ -2133,6 +2437,16 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.37.0',n:'Sesión persistente, Mi perfil y usuarios por secciones',f:'2026-11-12',cambios:[
+    'Sesión persistente: entras una vez en tu dispositivo y no vuelves a escribir la contraseña. El token se renueva solo mientras usas la app; se acabó el error "JWT expired" y las pantallas que quedaban en "0 disponibles" hasta recargar. Casilla "Mantener sesión iniciada" en el ingreso.',
+    'Salir cierra la sesión solo en ese dispositivo y la revoca en el servidor.',
+    'Nuevo "Mi perfil" (menú lateral o clic en tu nombre): editar tus datos, Cambiar contraseña (con verificación de la actual; cierra tus otras sesiones) y Recuperar contraseña por correo. Página /restablecer para el enlace del correo.',
+    'Administrador: clic en un usuario abre su perfil completo y editable (los mismos datos que ve el usuario), con Cambiar contraseña (temporal, obligatoria de cambiar al ingresar), Enviar recuperación, Sesiones activas (cerrar una o todas) e Historial de cambios.',
+    'Usuarios en tres secciones plegables con conteo — Anestesiólogos (subgrupos SEDAR, Colsubsidio, IME, Consulta externa), Administrativos y Hospitalarios — y buscador por nombre, cédula, correo o teléfono que ignora tildes y mayúsculas.',
+    'Seguridad: las acciones de contraseña se ejecutan en el servidor (funciones de Netlify) con verificación de rol; un usuario no puede cambiarse rol, estado, empresa, sección ni grupo; cada cambio de perfil queda en la tabla de auditoría.',
+    'Se puede seguir entrando con la cédula aunque el correo de ingreso pase a ser el real.',
+    'Corregido: los datos del registro inicial (correo, registro médico, teléfono, cédula, especialidad) no llegaban completos al perfil que ve el administrador. Ahora se copian al crear la cuenta, y los registros anteriores se recuperan con el script SQL. El registro con cédula pide además un correo real.'
+  ]},
   {v:'2.36.0',n:'Disponibilidad 2027 abierta',f:'2026-11-12',cambios:[
     'Nuevo: los cuatro trimestres de 2027 (Ene—Mar, Abr—Jun, Jul—Sep, Oct—Dic) quedan habilitados desde ya para que los anestesiólogos registren su disponibilidad.'
   ]},
@@ -2495,7 +2809,7 @@ function triDeM(m,anio){return TRIMESTRES.find(t=>t.meses.includes(m)&&(anio===u
 //  SCREEN MANAGEMENT — simple and bulletproof
 // ══════════════════════════════════════════════════════════════
 function show(screenId){
-  ['s-login','s-pending','s-app'].forEach(id=>{
+  ['s-login','s-pending','s-app','s-reset'].forEach(id=>{
     const el=document.getElementById(id);
     if(!el) return;
     el.classList.remove('active');
@@ -2517,9 +2831,18 @@ async function init(){
   show('s-login');
   ['reg-esp','reg-tipo','reg-empresa'].forEach(customizarSelect);
 
-  auth.onAuthStateChange(async(event,session)=>{
-    if(event==='SIGNED_OUT') show('s-login');
+  auth.onAuthStateChange(async(event,info)=>{
+    if(event!=='SIGNED_OUT') return;
+    // Sesion terminada desde fuera (Salir en otra pestaña, el admin la cerro, contraseña cambiada)
+    if(info?.motivo&&APP.user){
+      Object.assign(APP,{user:null,perfil:null,perfiles:[],disp:{},dist:{},isAdmin:false,isViewer:false,canEdit:false});
+      show('s-login');
+      setErr(document.getElementById('login-err'),'Tu sesión terminó. Ingresa de nuevo.','info');
+    }else if(!APP.user) show('s-login');
   });
+
+  // Enlace de "Recuperar contraseña" (/restablecer#access_token=...&type=recovery)
+  if(await manejarEnlaceRecuperacion()) return;
 
   try{
     const {data:{session}}=await auth.getSession();
@@ -2551,11 +2874,18 @@ async function doLogin(){
   const btn=document.getElementById('btn-login');
   if(!raw||!pwd){setErr(errEl,'Ingresa correo o cedula y contrasena','error');return;}
   btn.disabled=true;btn.textContent='Ingresando...';
+  try{ localStorage.setItem(SB_PERSIST,document.getElementById('login-keep')?.checked===false?'0':'1'); }catch(e){}
   // try/catch/finally de respaldo: pase lo que pase (fetch colgado, error
   // inesperado dentro de onLogin, etc.) el boton SIEMPRE debe volver a
   // habilitarse — nunca debe quedar en "Ingresando..." para siempre.
   try{
-    const {data,error}=await auth.signInWithPassword({email,password:pwd});
+    let {data,error}=await auth.signInWithPassword({email,password:pwd});
+    // v2.37.0 — Ingreso por cedula cuando el correo de ingreso ya es el real (para poder recuperar
+    // la contraseña): el servidor busca el usuario por cedula sin revelar su correo.
+    if(error&&!raw.includes('@')&&/invalid|credentials/i.test(error.message)){
+      const rs=await apiServidor('/api/publico/login-cedula',{cedula:raw,password:pwd},false);
+      if(!rs.error&&rs.data?.access_token){const sess=auth._setSession(rs.data);data={user:sess.user};error=null;}
+    }
     if(error){
       const msg=error.message.toLowerCase().includes('invalid')||error.message.toLowerCase().includes('credentials')
         ?'Correo/cedula o contrasena incorrectos'
@@ -2635,6 +2965,8 @@ async function onLogin(user){
 
     show('s-app');
     navTo(esJefeEnf?'cancelaciones':'dashboard');
+    // v2.37.0 — contraseña temporal asignada por el administrador: obligar a cambiarla
+    if(perfil.must_change_password) abrirCambiarPwd(true);
 
   }catch(e){
     console.error('onLogin error:',e);
@@ -2657,6 +2989,9 @@ async function doRegistro(){
   const errEl=document.getElementById('reg-err');
   const okEl=document.getElementById('reg-ok');
   if(!nombre||!apellidos||!rawEmail||!pwd){setErr(errEl,'Completa los campos requeridos','error');return;}
+  // v2.37.0 — correo real obligatorio (si el usuario de acceso es la cedula, se pide aparte)
+  const correoContacto=usaCedula?(document.getElementById('reg-correo')?.value||'').trim():rawEmail;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoContacto)){setErr(errEl,'Escribe un correo electrónico válido: ahí te llegará el enlace si olvidas la contraseña','error');return;}
   if(pwd.length<8){setErr(errEl,'Contrasena minimo 8 caracteres','error');return;}
   if(pwd!==pwd2){setErr(errEl,'Las contrasenas no coinciden','error');return;}
   const btn=document.getElementById('btn-reg');btn.disabled=true;
@@ -2671,6 +3006,7 @@ async function doRegistro(){
     empresa:document.getElementById('reg-empresa')?.value||'SEDAR',
     rol:(v=>['interconsulta','hospitalario'].includes(v)?v:'anestesiologo')(document.getElementById('reg-tipo')?.value),
     email,
+    correo:correoContacto, // correo real; la base de datos lo copia a perfiles.email
   };
   const {error}=await auth.signUp({email,password:pwd,options:{data:meta}});
   btn.disabled=false;
@@ -2694,12 +3030,12 @@ async function doLogout(){
 async function olvideContrasena(){
   const raw=(document.getElementById('login-email')?.value||'').trim();
   const errEl=document.getElementById('login-err');
-  if(!raw){setErr(errEl,'Escribe tu correo o cedula primero','error');return;}
-  if(!raw.includes('@')){
-    setErr(errEl,'Para restablecer por cedula contacta al administrador','info');return;
-  }
-  await auth.resetPasswordForEmail(raw);
-  setErr(errEl,'Enviamos un enlace a tu correo','success');
+  if(!raw){setErr(errEl,'Escribe tu correo o cédula primero','error');return;}
+  setErr(errEl,'Enviando...','info');
+  const r=await apiServidor('/api/publico/recuperar',{identificador:raw},false);
+  if(r.error&&raw.includes('@')) await auth.resetPasswordForEmail(raw); // respaldo si la funcion no esta disponible
+  else if(r.error){setErr(errEl,'No se pudo enviar: '+r.error.message+'. Contacta al administrador.','error');return;}
+  setErr(errEl,'Si tu usuario tiene un correo registrado, te llegará un enlace para crear una nueva contraseña. Si no llega en unos minutos, contacta al administrador.','success');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2840,6 +3176,7 @@ function navTo(v){
       ]).then(renderDist);
     },
     usuarios:()=>renderUsuarios(),
+    perfil:()=>renderPerfil(),
     cancelaciones:()=>{
       Promise.all([cargarPerfiles(),cargarCancelaciones()]).then(renderCancelaciones);
     },
@@ -6813,10 +7150,39 @@ async function guardarDist(){
 // ══════════════════════════════════════════════════════════════
 //  USUARIOS
 // ══════════════════════════════════════════════════════════════
-function setUFiltro(f,btn){uFiltro=f;document.querySelectorAll('#u-emp-tabs .emp-tab').forEach(b=>b.className='emp-tab');if(btn)btn.className='emp-tab '+(f==='all'?'all':f==='SEDAR'?'sedar':'col');renderUsuarios();}
+// ══════════════════════════════════════════════════════════════
+//  v2.37.0 — USUARIOS POR SECCIONES + MI PERFIL + CONTRASEÑAS
+//  Una sola fuente de datos personales: la fila de `perfiles` con id = id de autenticacion.
+//  Mi perfil y la vista del administrador leen y escriben esa misma fila.
+// ══════════════════════════════════════════════════════════════
+function normBusq(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();}
+function escH(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function esCorreoReal(e){return !!e&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)&&!/@agendaans\.local$/i.test(e);}
+const U_SECCIONES=[
+  {k:'anestesiologo',t:'Anestesiólogos'},
+  {k:'administrativo',t:'Administrativos'},
+  {k:'hospitalario',t:'Hospitalarios'},
+];
+const U_GRUPOS=['SEDAR','Colsubsidio','IME','Consulta externa'];
+// Si el administrador no ha fijado seccion/grupo, se deducen del rol y la empresa
+function seccionDe(p){
+  if(p?.seccion) return p.seccion;
+  if(p?.rol==='interconsulta'||p?.rol==='hospitalario') return 'hospitalario';
+  if(p?.rol==='viewer'||p?.rol==='jefe_enfermeria') return 'administrativo';
+  return 'anestesiologo';
+}
+function grupoDe(p){
+  if(p?.grupo) return p.grupo;
+  if(p?.empresa==='IME') return 'IME';
+  if(p?.empresa==='Colsubsidio') return 'Colsubsidio';
+  return 'SEDAR';
+}
+const _uAbiertas={anestesiologo:true,administrativo:true,hospitalario:true};
+
+function setUFiltro(){renderListaUsuarios();} // compatibilidad (los filtros por empresa ahora son subgrupos)
+
 async function renderUsuarios(){
   await cargarPerfiles();
-  // Pendientes
   const pendientes=APP.perfiles.filter(p=>!p.activo);
   const ps=document.getElementById('pendientes-section');
   if(ps)ps.style.display=(pendientes.length&&APP.isAdmin)?'':'none';
@@ -6828,90 +7194,412 @@ async function renderUsuarios(){
       div.innerHTML=`
         <div class="di-av ${avCls(p)}">${inics(p)}</div>
         <div style="flex:1">
-          <div class="di-name">${p.nombre} ${p.apellidos}
-            <span class="badge pend">${p.rol}</span>
-            <span class="badge ${p.empresa==='SEDAR'?'sedar':'col'}">${p.empresa||''}</span>
+          <div class="di-name">${escH(p.nombre)} ${escH(p.apellidos)}
+            <span class="badge pend">${escH(p.rol)}</span>
+            <span class="badge ${p.empresa==='SEDAR'?'sedar':'col'}">${escH(p.empresa||'')}</span>
           </div>
-          <div class="di-sub">CC: ${p.cedula||'-'} · Tel: ${p.telefono||'-'}</div>
+          <div class="di-sub">CC: ${escH(p.cedula||'-')} · Tel: ${escH(p.telefono||'-')}</div>
         </div>
         <div class="di-actions" style="display:flex;gap:5px;">
-          <button class="btn sm" onclick="abrirEditU('${p.id}')">✏ Editar</button>
+          ${APP.canEdit?`<button class="btn sm" onclick="abrirPerfil('${p.id}')">Ver perfil</button>
           <button class="btn succ sm" onclick="aprobarU('${p.id}')">✓ Aprobar</button>
-          <button class="btn dang sm" onclick="rechazarU('${p.id}')">✕ Rechazar</button>
+          <button class="btn dang sm" onclick="rechazarU('${p.id}')">✕ Rechazar</button>`:''}
         </div>`;
       pl.appendChild(div);
     });
   }
-  // Activos
-  let perfiles=APP.perfiles.filter(p=>p.activo);
-  if(uFiltro==='SEDAR') perfiles=perfiles.filter(p=>p.empresa==='SEDAR');
-  else if(uFiltro==='Colsubsidio') perfiles=perfiles.filter(p=>p.empresa==='Colsubsidio');
-  else if(uFiltro==='IME') perfiles=perfiles.filter(p=>p.empresa==='IME');
-  const ul=document.getElementById('usuarios-list');if(!ul)return;ul.innerHTML='';
-  if(!perfiles.length){
-    ul.innerHTML='<div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div><div class="empty-title">Sin usuarios</div></div>';
-    return;
-  }
-  perfiles.forEach(p=>{
-    const esAdm=p.rol==='admin';
-    const esViewer=p.rol==='viewer';
-    const esMismo=p.id===APP.user?.id;
-    const div=document.createElement('div');div.className='doc-item';
-    // Badge de rol especial
-    let rolBadge='';
-    if(esAdm) rolBadge='<span class="badge admin">ADMIN</span>';
-    else if(esViewer) rolBadge='<span style="font-family:var(--mono);font-size:7px;background:#f59e0b;color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;">VIEWER</span>';
-    else if(p.rol==='interconsulta') rolBadge='<span class="badge pend" style="font-size:8px;" title="Hospitalario de interconsultas (contrato OPS)">HOSP-IC</span>';
-    else if(p.rol==='hospitalario') rolBadge='<span class="badge pend" style="font-size:8px;" title="Hospitalario de consulta externa (sin contrato)">HOSP-CE</span>';
-    else if(p.rol==='jefe_enfermeria') rolBadge='<span class="badge jefe" style="font-size:8px;">JEFE ENFERMERIA · ROTACIONAL</span>';
-    div.innerHTML=`
-      <div class="di-av ${avCls(p)}">${inics(p)}</div>
-      <div style="flex:1">
-        <div class="di-name">
-          ${p.nombre} ${p.apellidos}
-          ${rolBadge}
-          ${esMismo?'<span class="badge col">Tú</span>':''}
-        </div>
-        <div class="di-sub">${isIME(p)?`<span class="badge ime" style="font-size:8px;padding:1px 5px;">Slot rotativo IME</span> CC: ${p.cedula||'—'}`:( p.especialidad||p.rol )+' · CC: '+(p.cedula||'-')+' · Tel: '+(p.telefono||'-')}</div>
-      </div>
-      <span class="badge ${p.empresa==='SEDAR'?'sedar':p.empresa==='IME'?'ime':'col'}">${p.empresa||''}</span>
-      <div class="di-actions" style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;">
-        ${APP.canEdit?`
-          <button class="btn sm" onclick="abrirEditU('${p.id}')">✏ Editar</button>
-          ${esViewer&&!esMismo?`<button class="btn sm prim" onclick="toggleViewerAdmin('${p.id}','admin')" title="Dar acceso completo de administrador a este usuario">⚡ Promover Admin</button>`:''}
-          ${esAdm&&!esMismo?`<button class="btn sm" style="color:#b45309;border-color:#f59e0b;" onclick="toggleViewerAdmin('${p.id}','viewer')" title="Reducir a visualizador (sin edición)">↓ Reducir Viewer</button>`:''}
-          ${!esMismo&&!esAdm?`<button class="btn sm" style="${p.activo?'color:#c07820;border-color:#c07820;':'color:#0a6a40;border-color:#0a6a40;'}"
-            onclick="toggleSuspender('${p.id}','${p.activo}')">${p.activo?'⏸ Suspender':'▶ Activar'}</button>`:''}
-        `:''}
-      </div>`;
-    ul.appendChild(div);
-  });
+  renderListaUsuarios();
 }
 
+function _uFilaHTML(p){
+  const esAdm=p.rol==='admin', esViewer=p.rol==='viewer', esMismo=p.id===APP.user?.id;
+  let rolBadge='';
+  if(esAdm) rolBadge='<span class="badge admin">ADMIN</span>';
+  else if(esViewer) rolBadge='<span style="font-family:var(--mono);font-size:7px;background:#f59e0b;color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;">VIEWER</span>';
+  else if(p.rol==='interconsulta') rolBadge='<span class="badge pend" style="font-size:8px;" title="Hospitalario de interconsultas (contrato OPS)">HOSP-IC</span>';
+  else if(p.rol==='hospitalario') rolBadge='<span class="badge pend" style="font-size:8px;" title="Hospitalario de consulta externa (sin contrato)">HOSP-CE</span>';
+  else if(p.rol==='jefe_enfermeria') rolBadge='<span class="badge jefe" style="font-size:8px;">JEFE ENFERMERIA · ROTACIONAL</span>';
+  const contacto=[p.cedula?'CC: '+escH(p.cedula):'',p.telefono?'Tel: '+escH(p.telefono):'',esCorreoReal(p.email)?escH(p.email):''].filter(Boolean).join(' · ');
+  return `<div class="doc-item u-fila" onclick="abrirPerfil('${p.id}')">
+      <div class="di-av ${avCls(p)}">${inics(p)}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="di-name">${escH(p.nombre)} ${escH(p.apellidos)} ${rolBadge} ${esMismo?'<span class="badge col">Tú</span>':''}</div>
+        <div class="di-sub">${isIME(p)?'<span class="badge ime" style="font-size:8px;padding:1px 5px;">Slot rotativo IME</span> ':''}${escH(p.especialidad||'')}${p.especialidad&&contacto?' · ':''}${contacto||'—'}</div>
+      </div>
+      <span class="badge ${p.empresa==='SEDAR'?'sedar':p.empresa==='IME'?'ime':'col'}">${escH(p.empresa||'')}</span>
+      ${APP.canEdit?`<div class="di-actions" style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;" onclick="event.stopPropagation()">
+        <button class="btn sm" onclick="abrirPerfil('${p.id}')">Ver perfil</button>
+        <button class="btn sm" onclick="abrirPwdAdmin('${p.id}')">Cambiar contraseña</button>
+        <button class="btn sm" onclick="enviarRecuperacionAdmin('${p.id}')">Enviar recuperación</button>
+      </div>`:''}
+    </div>`;
+}
 
-async function abrirEditU(id){
-  if(!APP.canEdit){toast('Solo el administrador puede editar usuarios','error');return;}
-  // Recargar siempre desde Supabase para tener datos actualizados
+function renderListaUsuarios(){
+  const ul=document.getElementById('usuarios-list');if(!ul)return;
+  const q=normBusq(document.getElementById('u-buscar')?.value);
+  const qDig=q.replace(/\D/g,'');
+  const coincide=p=>{
+    if(!q) return true;
+    const txt=normBusq([p.nombre,p.apellidos,p.cedula,p.email,p.telefono].join(' '));
+    if(q.split(/\s+/).every(w=>txt.includes(w))) return true;
+    return qDig.length>=4&&(String(p.cedula||'')+' '+String(p.telefono||'')).replace(/\D/g,'').includes(qDig);
+  };
+  const activos=APP.perfiles.filter(p=>p.activo&&coincide(p))
+    .sort((a,b)=>normBusq(a.apellidos+' '+a.nombre).localeCompare(normBusq(b.apellidos+' '+b.nombre)));
+  let html='';
+  U_SECCIONES.forEach(sec=>{
+    const lista=activos.filter(p=>seccionDe(p)===sec.k);
+    if(!lista.length&&q) return; // al buscar, se ocultan las secciones sin coincidencias
+    const abierta=q?true:_uAbiertas[sec.k];
+    let cuerpo='';
+    if(!lista.length) cuerpo='<div class="pf-ayuda" style="padding:4px 6px 8px;">Sin usuarios en esta sección</div>';
+    else if(sec.k==='anestesiologo'){
+      U_GRUPOS.forEach(g=>{
+        const lg=lista.filter(p=>grupoDe(p)===g);
+        if(!lg.length) return;
+        cuerpo+=`<div class="u-sub">${g} <span class="u-cnt">${lg.length}</span></div>`+lg.map(_uFilaHTML).join('');
+      });
+    } else cuerpo=lista.map(_uFilaHTML).join('');
+    html+=`<details class="u-sec" ${abierta?'open':''} ontoggle="if(!document.getElementById('u-buscar').value)_uAbiertas['${sec.k}']=this.open">
+      <summary>${sec.t} <span class="u-cnt">${lista.length}</span></summary>
+      <div class="doc-list">${cuerpo}</div></details>`;
+  });
+  ul.innerHTML=html||'<div class="empty"><div class="empty-title">Sin coincidencias</div></div>';
+}
+
+// ── PERFIL ──────────────────────────────────────────────────────
+function abrirEditU(id){abrirPerfil(id);} // compatibilidad con llamadas anteriores
+function abrirPerfil(id){
+  APP.pfId=id||APP.user?.id;
+  navTo('perfil');
+}
+function _pfModo(p){
+  const propio=p.id===APP.user?.id;
+  if(APP.canEdit) return propio?'admin-propio':'admin';
+  return propio?'propio':'ver';
+}
+async function renderPerfil(){
+  const id=APP.pfId||APP.user?.id;
+  if(id!==APP.user?.id&&!APP.isAdmin){APP.pfId=APP.user?.id;return renderPerfil();}
+  const {data:p,error}=await db.from('perfiles').select('*').eq('id',id).maybeSingle();
+  if(error||!p){toast('No se pudo cargar el perfil'+(error?': '+error.message:''),'error');return;}
+  if(p.id===APP.user?.id) APP.perfil=Object.assign(APP.perfil||{},p);
+  const modo=_pfModo(p);
+  const esAdminVista=modo==='admin'||modo==='admin-propio';
+  const soloVer=modo==='ver';
+  const $=x=>document.getElementById(x);
+  $('pf-titulo').textContent=(modo==='propio'||modo==='admin-propio')?'Mi perfil':(p.nombre+' '+p.apellidos);
+  $('pf-sub').textContent=[U_SECCIONES.find(s=>s.k===seccionDe(p))?.t,seccionDe(p)==='anestesiologo'?grupoDe(p):'',p.rol].filter(Boolean).join(' · ');
+  $('pf-volver').style.display=(APP.isAdmin&&p.id!==APP.user?.id)?'':'none';
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('on'));
+  document.querySelector(`[data-v="${p.id===APP.user?.id?'perfil':'usuarios'}"]`)?.classList.add('on');
+  $('pf-id').value=p.id;
+  const set=(el,v)=>{$(el).value=v??'';};
+  set('pf-nombre',p.nombre);set('pf-apellidos',p.apellidos);set('pf-cc',p.cedula);set('pf-tel',p.telefono);
+  set('pf-email',esCorreoReal(p.email)?p.email:'');set('pf-rm',p.registro_med);set('pf-esp',p.especialidad);
+  set('pf-seccion',seccionDe(p));set('pf-grupo',grupoDe(p));set('pf-empresa',p.empresa||'SEDAR');set('pf-rol',p.rol||'anestesiologo');set('pf-activo',String(!!p.activo));
+  ['pf-nombre','pf-apellidos','pf-cc','pf-tel','pf-email','pf-rm'].forEach(x=>{$(x).readOnly=soloVer;});
+  $('pf-esp').disabled=soloVer;
+  $('pf-admin-campos').style.display=esAdminVista?'':'none';
+  $('pf-guardar').style.display=soloVer?'none':'';
+  $('pf-eliminar').style.display=modo==='admin'?'':'none';
+  $('pf-solo-ver').style.display=soloVer?'':'none';
+  $('pf-solo-ver').textContent=soloVer?'Vista de solo lectura.':'';
+  $('pf-box-pwd').style.display=soloVer?'none':'';
+  $('pf-btn-recup').textContent=modo==='admin'?'Enviar recuperación':'Recuperar contraseña';
+  $('pf-pwd-ayuda').textContent=modo==='admin'
+    ?'El administrador no puede ver la contraseña actual de nadie; solo asignar una temporal o enviar el enlace de recuperación.'
+    :'Nadie, ni el administrador, puede ver tu contraseña.';
+  $('pf-err').className='err-msg';
+  if(esAdminVista) ['pf-seccion','pf-grupo','pf-empresa','pf-rol','pf-activo'].forEach(x=>{try{customizarSelect(x);}catch(e){}});
+  try{customizarSelect('pf-esp');}catch(e){}
+  cargarSesiones(p.id);
+  const ba=$('pf-box-audit');ba.style.display=APP.isAdmin?'':'none';
+  if(APP.isAdmin) cargarAuditoria(p.id);
+}
+
+async function guardarPerfil(){
+  const $=x=>document.getElementById(x);
+  const id=$('pf-id').value;
+  const p=APP.perfiles.find(x=>x.id===id)||(id===APP.user?.id?APP.perfil:null)||{};
+  const modo=_pfModo({id});
+  if(modo==='ver') return;
+  const errEl=$('pf-err');
+  const data={
+    nombre:$('pf-nombre').value.trim(), apellidos:$('pf-apellidos').value.trim(),
+    cedula:$('pf-cc').value.trim(), telefono:$('pf-tel').value.trim(),
+    registro_med:$('pf-rm').value.trim(), especialidad:$('pf-esp').value,
+  };
+  const correo=$('pf-email').value.trim();
+  if(!data.nombre||!data.apellidos){setErr(errEl,'Nombre y apellidos son requeridos','error');return;}
+  if(correo&&!esCorreoReal(correo)){setErr(errEl,'Escribe un correo válido','error');return;}
+  // Si el campo queda vacio se conserva el correo actual (o el ficticio de ingreso)
+  if(correo) data.email=correo;
+  if(modo==='admin'||modo==='admin-propio'){
+    data.empresa=$('pf-empresa').value; data.rol=$('pf-rol').value;
+    data.activo=$('pf-activo').value==='true';
+    data.seccion=$('pf-seccion').value; data.grupo=data.seccion==='anestesiologo'?$('pf-grupo').value:null;
+    if(data.empresa==='IME'&&data.rol==='anestesiologo') data.rol='ime';
+    if(modo==='admin-propio'&&(data.rol!=='admin'||!data.activo)){setErr(errEl,'No puedes quitarte tu propio rol de administrador ni suspenderte','error');return;}
+    if(p.seccion==null&&data.seccion===seccionDe(p)&&p.grupo==null&&(data.grupo===grupoDe(p)||data.grupo===null)){
+      delete data.seccion;delete data.grupo; // sin cambios: se sigue deduciendo del rol/empresa
+    }
+  }
+  const btn=$('pf-guardar');btn.disabled=true;btn.textContent='Guardando...';
+  let res=await dbWrite('PATCH','perfiles?id=eq.'+id,data);
+  if(res.error&&/seccion|grupo/.test(res.error.message)&&('seccion' in data)){
+    delete data.seccion;delete data.grupo; // la migracion v2.37.0 aun no se ha ejecutado
+    res=await dbWrite('PATCH','perfiles?id=eq.'+id,data);
+    if(!res.error) toast('Sección y grupo no se guardaron: falta ejecutar la migración SQL v2.37.0','info');
+  }
+  btn.disabled=false;btn.textContent='Guardar cambios';
+  if(res.error){setErr(errEl,'No se guardó: '+res.error.message,'error');return;}
+  if(!res.data){setErr(errEl,'⚠️ El cambio no se guardó (permisos de Supabase — RLS).','error');return;}
+  // Pasar el correo a Auth para que la recuperacion de contraseña llegue a ese correo
+  if(correo&&correo.toLowerCase()!==String(p.email||'').toLowerCase()){
+    const r=await apiServidor('/api/cuenta',{accion:'sync_email',id},true);
+    if(r.error) toast('Perfil guardado. El correo de recuperación se activará cuando el servidor esté configurado ('+r.error.message+')','info');
+  }
+  if(id===APP.user?.id){
+    APP.perfil=Object.assign(APP.perfil||{},res.data);
+    const nm=document.getElementById('hdr-nm');if(nm)nm.textContent=APP.perfil.nombre+' '+APP.perfil.apellidos;
+    const av=document.getElementById('hdr-av');if(av)av.textContent=inics(APP.perfil);
+  }
   await cargarPerfiles();
+  toast('Perfil guardado','success');
+  renderPerfil();
+}
+
+async function eliminarDesdePerfil(){
+  document.getElementById('eu-id').value=document.getElementById('pf-id').value;
+  await eliminarU();
+  if(!APP.perfiles.find(x=>x.id===document.getElementById('pf-id').value)) navTo('usuarios');
+}
+
+function pfCambiarPwd(){
+  const id=document.getElementById('pf-id').value;
+  if(id===APP.user?.id) abrirCambiarPwd(false); else abrirPwdAdmin(id);
+}
+async function pfRecuperarPwd(){
+  const id=document.getElementById('pf-id').value;
+  if(id!==APP.user?.id) return enviarRecuperacionAdmin(id);
+  const p=APP.perfil||{};
+  const ident=esCorreoReal(p.email)?p.email:(p.cedula||'');
+  if(!esCorreoReal(p.email)){toast('Primero registra tu correo en Datos personales y guarda','info');return;}
+  const r=await apiServidor('/api/publico/recuperar',{identificador:ident},false);
+  if(r.error) await auth.resetPasswordForEmail(ident);
+  toast('Te enviamos un enlace a '+p.email+' para crear una nueva contraseña','success');
+}
+
+// ── Cambio de contraseña propio ───────────────────────────────────
+let _pwdForzado=false;
+function abrirCambiarPwd(forzado){
+  _pwdForzado=!!forzado;
+  const $=x=>document.getElementById(x);
+  ['mp-actual','mp-nueva','mp-nueva2'].forEach(x=>$(x).value='');
+  $('mp-actual-f').style.display=forzado?'none':'';
+  $('mp-aviso').style.display=forzado?'':'none';
+  $('mp-x').style.display=forzado?'none':'';
+  $('mp-cancel').style.display=forzado?'none':'';
+  $('mp-titulo').textContent=forzado?'Crea tu nueva contraseña':'Cambiar contraseña';
+  $('mp-err').className='err-msg';
+  openModal('modal-pwd');
+}
+async function _correoIngreso(){
+  if(_sess?.user?.email) return _sess.user.email;
+  try{
+    const r=await fetchConTimeout(SUPA_URL+'/auth/v1/user',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_token()}});
+    if(r.ok){const u=await r.json();if(_sess){_sess.user=Object.assign({},_sess.user,{email:u.email});_lsSave(_sess);}return u.email;}
+  }catch(e){}
+  return null;
+}
+async function guardarCambiarPwd(){
+  const $=x=>document.getElementById(x);
+  const errEl=$('mp-err');
+  const actual=$('mp-actual').value, nueva=$('mp-nueva').value, nueva2=$('mp-nueva2').value;
+  if(!_pwdForzado&&!actual){setErr(errEl,'Escribe tu contraseña actual','error');return;}
+  if(nueva.length<8){setErr(errEl,'La nueva contraseña debe tener mínimo 8 caracteres','error');return;}
+  if(nueva!==nueva2){setErr(errEl,'Las contraseñas no coinciden','error');return;}
+  if(!_pwdForzado&&nueva===actual){setErr(errEl,'La nueva contraseña debe ser distinta de la actual','error');return;}
+  const btn=$('mp-ok');btn.disabled=true;btn.textContent='Guardando...';
+  try{
+    if(!_pwdForzado){
+      // Verificar la contraseña actual en el servidor de autenticacion
+      const correo=await _correoIngreso();
+      if(!correo){setErr(errEl,'No se pudo verificar tu usuario. Recarga la página.','error');return;}
+      const r=await _fetchRaw(SUPA_URL+'/auth/v1/token?grant_type=password',{method:'POST',
+        headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:correo,password:actual})},15000);
+      if(!r.ok){setErr(errEl,'La contraseña actual no es correcta','error');return;}
+      const d=await r.json();
+      // Cerrar de inmediato la sesion de verificacion para no dejarla abierta
+      _fetchRaw(SUPA_URL+'/auth/v1/logout?scope=local',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+d.access_token}}).catch(()=>{});
+    }
+    const {error}=await auth.updateUser({password:nueva});
+    if(error){
+      let m=error.message;
+      if(/same|different/i.test(m)) m='La nueva contraseña debe ser distinta de la actual';
+      else if(/reauth/i.test(m)) m='Supabase pide reautenticación reciente: sal, vuelve a entrar e intenta de nuevo';
+      else if(/weak|short/i.test(m)) m='Contraseña muy débil: usa al menos 8 caracteres con letras y números';
+      setErr(errEl,m,'error');return;
+    }
+    await auth.signOutOthers();
+    if(APP.perfil?.must_change_password){
+      await dbWrite('PATCH','perfiles?id=eq.'+APP.user.id,{must_change_password:false});
+      APP.perfil.must_change_password=false;
+    }
+    closeModal('modal-pwd');
+    toast('Contraseña cambiada. Se cerraron tus sesiones en otros dispositivos.','success');
+    if(document.getElementById('view-perfil')?.classList.contains('on')) cargarSesiones(APP.user.id);
+  }finally{
+    btn.disabled=false;btn.textContent='Cambiar contraseña';
+  }
+}
+
+// ── Acciones del administrador (se ejecutan en el servidor) ──────────
+function genPwdTemporal(){
+  const c='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  const a=new Uint32Array(10);crypto.getRandomValues(a);
+  return 'Ans-'+Array.from(a,x=>c[x%c.length]).join('');
+}
+function abrirPwdAdmin(id){
+  if(!soloAdmin('Solo el administrador puede asignar contraseñas')) return;
+  const p=APP.perfiles.find(x=>x.id===id);if(!p)return;
+  document.getElementById('ma-id').value=id;
+  document.getElementById('ma-quien').textContent='Usuario: '+p.nombre+' '+p.apellidos+(p.cedula?' · CC '+p.cedula:'');
+  document.getElementById('ma-pwd').value=genPwdTemporal();
+  document.getElementById('ma-err').className='err-msg';
+  openModal('modal-pwd-admin');
+}
+async function guardarPwdAdmin(){
+  if(!soloAdmin()) return;
+  const id=document.getElementById('ma-id').value;
+  const pwd=document.getElementById('ma-pwd').value.trim();
+  const errEl=document.getElementById('ma-err');
+  if(pwd.length<8){setErr(errEl,'Mínimo 8 caracteres','error');return;}
+  const btn=document.getElementById('ma-ok');btn.disabled=true;btn.textContent='Asignando...';
+  const r=await apiServidor('/api/cuenta',{accion:'set_password',id,password:pwd},true);
+  btn.disabled=false;btn.textContent='Asignar contraseña';
+  if(r.error){setErr(errEl,r.error.message,'error');return;}
+  closeModal('modal-pwd-admin');
+  toast('Contraseña temporal asignada. El usuario deberá cambiarla al ingresar.','success');
+  if(document.getElementById('pf-id').value===id&&document.getElementById('view-perfil')?.classList.contains('on')) renderPerfil();
+}
+async function enviarRecuperacionAdmin(id){
+  if(!soloAdmin('Solo el administrador puede enviar la recuperación')) return;
   const p=APP.perfiles.find(x=>x.id===id);
-  if(!p){toast('Usuario no encontrado','error');return;}
-  document.getElementById('eu-id').value=id;
-  document.getElementById('eu-nombre').value=p.nombre||'';
-  document.getElementById('eu-apellidos').value=p.apellidos||'';
-  document.getElementById('eu-cc').value=p.cedula||'';
-  document.getElementById('eu-tel').value=p.telefono||'';
-  document.getElementById('eu-rm').value=p.registro_med||'';
-  document.getElementById('eu-esp').value=p.especialidad||'';
-  document.getElementById('eu-empresa').value=p.empresa||'SEDAR';
-  document.getElementById('eu-rol').value=p.rol||'anestesiologo';
-  document.getElementById('eu-activo').value=String(p.activo);
-  document.getElementById('eu-email').value=p.email||'';
-  document.getElementById('eu-pwd').value='';
-  document.getElementById('eu-pwd2').value='';
-  const errEl=document.getElementById('eu-err');
-  if(errEl)errEl.className='err-msg';
-  ['eu-esp','eu-empresa','eu-rol','eu-activo'].forEach(customizarSelect);
-  openModal('modal-usuario');
+  if(p&&!esCorreoReal(p.email)){toast('Este usuario no tiene correo registrado. Agrégalo en su perfil primero.','info');return;}
+  if(!confirm('¿Enviar a '+(p?.email||'su correo')+' el enlace para crear una nueva contraseña?')) return;
+  const r=await apiServidor('/api/cuenta',{accion:'send_recovery',id},true);
+  if(r.error){toast('No se envió: '+r.error.message,'error');return;}
+  toast('Enlace de recuperación enviado a '+(r.data.correo||p?.email),'success');
+}
+
+// ── Sesiones activas ──────────────────────────────────────────────
+async function rpcSupa(fn,args){
+  try{
+    const r=await fetchConTimeout(SUPA_URL+'/rest/v1/rpc/'+fn,{method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_token(),'Content-Type':'application/json'},body:JSON.stringify(args||{})});
+    const t=await r.text();const d=t?JSON.parse(t):null;
+    if(!r.ok) return {data:null,error:{message:d?.message||r.statusText,code:d?.code}};
+    return {data:d,error:null};
+  }catch(e){return {data:null,error:{message:e.message}};}
+}
+function _sesionActualId(){
+  try{return JSON.parse(atob(_token().split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).session_id;}catch(e){return null;}
+}
+function _dispositivo(ua){
+  ua=ua||'';
+  const so=/iPhone|iPad/.test(ua)?'iPhone/iPad':/Android/.test(ua)?'Android':/Mac OS X|Macintosh/.test(ua)?'Mac':/Windows/.test(ua)?'Windows':/Linux/.test(ua)?'Linux':'Dispositivo';
+  const nav=/Edg\//.test(ua)?'Edge':/CriOS|Chrome\//.test(ua)?'Chrome':/FxiOS|Firefox\//.test(ua)?'Firefox':/Safari\//.test(ua)?'Safari':'';
+  return so+(nav?' · '+nav:'');
+}
+async function cargarSesiones(uid){
+  const box=document.getElementById('pf-sesiones');if(!box)return;
+  box.textContent='Cargando...';
+  const {data,error}=await rpcSupa('admin_sesiones',{p_user:uid});
+  if(error){
+    box.textContent=/admin_sesiones|function|404|PGRST202/i.test(error.message+error.code)
+      ?'Disponible al ejecutar la migración SQL v2.37.0 en Supabase.':'No se pudieron cargar: '+error.message;
+    return;
+  }
+  const actual=_sesionActualId();
+  if(!data?.length){box.textContent='Sin sesiones activas.';return;}
+  const f=d=>d?new Date(d).toLocaleString('es-CO',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+  box.innerHTML=data.map(s=>`<div class="u-sesion">
+      <div style="flex:1;min-width:0;"><b style="color:var(--ink);">${escH(_dispositivo(s.dispositivo))}</b>${s.id===actual?' <span class="badge col">Esta sesión</span>':''}
+        <div>Última actividad: ${f(s.ultima_actividad)} · desde ${f(s.creada)}${s.ip?' · IP '+escH(s.ip):''}</div></div>
+      ${s.id===actual?'':`<button class="btn sm dang" onclick="cerrarSesionU('${uid}','${s.id}')">Cerrar</button>`}
+    </div>`).join('')+
+    (data.length>1||data[0].id!==actual?`<div style="margin-top:8px;"><button class="btn sm" onclick="cerrarSesionU('${uid}',null)">${uid===APP.user?.id?'Cerrar sesión en los demás dispositivos':'Cerrar todas sus sesiones'}</button></div>`:'')+
+    '<div style="margin-top:6px;">Al cerrar una sesión, ese dispositivo pide contraseña en máximo 1 hora.</div>';
+}
+async function cerrarSesionU(uid,sid){
+  if(uid!==APP.user?.id&&!soloAdmin()) return;
+  if(!confirm(sid?'¿Cerrar esta sesión?':'¿Cerrar todas las sesiones'+(uid===APP.user?.id?' de tus otros dispositivos':' de este usuario')+'?')) return;
+  let r;
+  if(uid===APP.user?.id&&!sid){ await auth.signOutOthers(); r={error:null}; }
+  else r=await rpcSupa('admin_cerrar_sesion',{p_user:uid,p_sesion:sid});
+  if(r.error){toast('No se pudo cerrar: '+r.error.message,'error');return;}
+  toast('Sesión cerrada','success');
+  cargarSesiones(uid);
+}
+
+async function cargarAuditoria(uid){
+  const box=document.getElementById('pf-audit');if(!box)return;
+  const {data,error}=await db.from('auditoria_perfiles').select('*').eq('usuario_id',uid).order('fecha',{ascending:false});
+  if(error){box.textContent='Disponible al ejecutar la migración SQL v2.37.0 en Supabase.';return;}
+  if(!data?.length){box.textContent='Sin cambios registrados.';return;}
+  const quien=id=>{if(!id)return 'Sistema';const p=getP(id);return p?(p.nombre+' '+(p.apellidos||'').split(' ')[0]):'—';};
+  const nombres={nombre:'Nombre',apellidos:'Apellidos',cedula:'Cédula',telefono:'Teléfono',email:'Correo',registro_med:'Registro médico',especialidad:'Especialidad',empresa:'Empresa',rol:'Rol',activo:'Estado',seccion:'Sección',grupo:'Grupo',must_change_password:'Debe cambiar contraseña'};
+  box.innerHTML=data.slice(0,40).map(a=>`<div class="u-sesion"><div style="flex:1;">
+      <b style="color:var(--ink);">${escH(nombres[a.campo]||a.campo)}</b>: ${a.valor_anterior!=null?escH(a.valor_anterior)+' → ':''}${escH(a.valor_nuevo??'—')}
+      <div>${new Date(a.fecha).toLocaleString('es-CO',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})} · ${escH(quien(a.actor_id))}</div></div></div>`).join('');
+}
+
+// ── Enlace de recuperacion (/restablecer) ────────────────────────
+async function manejarEnlaceRecuperacion(){
+  const h=new URLSearchParams((location.hash||'').replace(/^#/,''));
+  const enRuta=location.pathname.replace(/\/$/,'')==='/restablecer';
+  if(h.get('error')||h.get('error_description')){
+    show('s-reset');
+    document.getElementById('rs-form').style.display='none';
+    document.getElementById('rs-sub').textContent=/expired|invalid/i.test(h.get('error_code')+h.get('error_description'))
+      ?'El enlace venció o ya fue usado. Pide uno nuevo desde "Olvidé mi contraseña".'
+      :'No se pudo abrir el enlace: '+(h.get('error_description')||h.get('error'));
+    history.replaceState(null,'','/restablecer');
+    return true;
+  }
+  if(h.get('access_token')&&(h.get('type')==='recovery'||enRuta)){
+    auth._setSession({access_token:h.get('access_token'),refresh_token:h.get('refresh_token'),
+      expires_in:parseInt(h.get('expires_in')||'3600'),expires_at:parseInt(h.get('expires_at')||'0')||undefined});
+    history.replaceState(null,'','/restablecer');
+    document.getElementById('rs-form').style.display='';
+    show('s-reset');
+    setTimeout(()=>document.getElementById('rs-pwd')?.focus(),50);
+    return true;
+  }
+  if(enRuta) history.replaceState(null,'','/');
+  return false;
+}
+async function guardarRestablecer(){
+  const pwd=document.getElementById('rs-pwd').value, pwd2=document.getElementById('rs-pwd2').value;
+  const errEl=document.getElementById('rs-err');
+  if(pwd.length<8){setErr(errEl,'Mínimo 8 caracteres','error');return;}
+  if(pwd!==pwd2){setErr(errEl,'Las contraseñas no coinciden','error');return;}
+  const btn=document.getElementById('btn-rs');btn.disabled=true;btn.textContent='Guardando...';
+  const {error}=await auth.updateUser({password:pwd});
+  if(error){
+    btn.disabled=false;btn.textContent='Guardar y entrar';
+    setErr(errEl,/same|different/i.test(error.message)?'Usa una contraseña distinta de la anterior':'No se pudo guardar: '+error.message,'error');return;
+  }
+  await auth.signOutOthers();
+  const uid=_sess?.user?.id;
+  if(uid) await dbWrite('PATCH','perfiles?id=eq.'+uid,{must_change_password:false});
+  history.replaceState(null,'','/');
+  btn.disabled=false;btn.textContent='Guardar y entrar';
+  toast('Contraseña actualizada','success');
+  if(_sess?.user) await onLogin(_sess.user); else show('s-login');
 }
 
 async function guardarUsuario(){
@@ -8450,7 +9138,7 @@ function openModal(id){const el=document.getElementById(id);if(el)el.classList.a
 function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('open');}
 document.addEventListener('click',e=>{
   if(e.target.classList.contains('overlay'))
-    document.querySelectorAll('.overlay.open').forEach(m=>m.classList.remove('open'));
+    document.querySelectorAll('.overlay.open').forEach(m=>{ if(m.id==='modal-pwd'&&_pwdForzado) return; m.classList.remove('open'); });
 });
 
 // Delegación de eventos para tabla del cuadro — más confiable en Safari
