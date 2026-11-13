@@ -5,7 +5,9 @@
 -- ════════════════════════════════════════════════════════════════════
 
 -- 1. Campos nuevos del perfil ------------------------------------------------
+-- La tabla no tenía columna de correo: el correo del registro se perdía.
 alter table public.perfiles
+  add column if not exists email text,
   add column if not exists seccion text,
   add column if not exists grupo text,
   add column if not exists must_change_password boolean not null default false;

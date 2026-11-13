@@ -2,10 +2,10 @@
 --  AgendaANS v2.37.0 (b) — Datos del registro inicial que no llegaban al perfil
 --  Ejecutar en Supabase → SQL Editor, DESPUÉS de migracion_v2.37.0_perfiles_sesiones.sql.
 --
---  Problema: al registrarse, nombre, cédula, teléfono, registro médico, especialidad y
---  correo se guardan en los metadatos de Supabase Auth (raw_user_meta_data). La función
---  que crea la fila en `perfiles` no copia todos esos campos, por eso el administrador
---  ve el perfil sin correo o sin registro médico.
+--  Problema (verificado 13/11/2026): al registrarse, cédula, teléfono, registro médico,
+--  especialidad y correo se guardan en los metadatos de Supabase Auth. La función
+--  handle_new_user solo copia nombre, apellidos y empresa a `perfiles`, y la tabla no
+--  tenía columna de correo; por eso el administrador ve el perfil sin esos datos.
 -- ════════════════════════════════════════════════════════════════════
 
 -- 0. (Diagnóstico, opcional) ver qué hace hoy la función que crea el perfil:
@@ -31,6 +31,11 @@ begin
   -- Correo real: el campo "correo" del formulario nuevo, o el de acceso si no es el ficticio
   correo := coalesce(nullif(m->>'correo',''),
                      case when (m->>'email') !~* '@agendaans\.local$' then nullif(m->>'email','') end);
+  -- Tipo de usuario elegido en el registro (handle_new_user siempre ponía 'anestesiologo').
+  -- Solo los dos tipos no privilegiados del formulario; la cuenta sigue inactiva hasta que el admin la apruebe.
+  if new.rol = 'anestesiologo' and (m->>'rol') in ('interconsulta','hospitalario') then
+    new.rol := m->>'rol';
+  end if;
   if correo is not null and (new.email is null or new.email = '' or new.email ~* '@agendaans\.local$') then
     new.email := correo;
   end if;
