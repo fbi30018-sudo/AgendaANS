@@ -772,6 +772,32 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
   .cal-day{min-height:46px;}
   .bar-row .bl{width:100px;}
 }
+/* ═══ v2.38.0 — Comunicados y expedientes ═══ */
+.com-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.com-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #c8d4e0;border-radius:var(--r);background:#fff;margin-bottom:8px;color:#0d1f35;}
+.com-item .ci-main{flex:1;min-width:0;}
+.com-item .ci-tit{font-weight:600;font-size:14px;color:#0d1f35;}
+.com-item .ci-sub{font-family:var(--mono);font-size:10px;color:#4e6c8a;margin-top:3px;}
+.com-tag{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.4px;padding:2px 7px;border-radius:3px;text-transform:uppercase;}
+.com-tag.com{background:#e3effd;color:#1a5cbf;}
+.com-tag.lla{background:#fde8e8;color:#b42318;}
+.com-tag.pend{background:#fff4e0;color:#b45309;}
+.com-tag.ok{background:#e4f6ec;color:#0a7a4a;}
+.com-prog{height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;margin-top:6px;max-width:220px;}
+.com-prog>div{height:100%;background:#0a7a4a;}
+.com-firma-pad{width:100%;height:170px;border:2px dashed #b9c4ce;border-radius:6px;background:#fcfdfe;touch-action:none;display:block;}
+.com-check{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#0d1f35;margin:12px 0 4px;}
+.com-check input{margin-top:3px;width:18px;height:18px;flex-shrink:0;}
+.com-dest-list{max-height:220px;overflow:auto;border:1px solid #c8d4e0;border-radius:4px;padding:6px 10px;}
+.com-dest-list label{display:flex;gap:8px;align-items:center;font-size:12px;padding:3px 0;color:#0d1f35;text-transform:none;letter-spacing:0;font-family:inherit;}
+.com-tbl{width:100%;border-collapse:collapse;font-size:12px;color:#0d1f35;}
+.com-tbl th{text-align:left;font-family:var(--mono);font-size:9px;text-transform:uppercase;color:#4e6c8a;padding:6px;border-bottom:1px solid #c8d4e0;}
+.com-tbl td{padding:6px;border-bottom:1px solid #eef2f6;vertical-align:middle;}
+.com-desc{white-space:pre-wrap;font-size:13px;line-height:1.5;background:#f7f9fc;border:1px solid #e2e8f0;border-radius:4px;padding:10px 12px;margin-bottom:10px;color:#0d1f35;}
+.com-gr{display:flex;gap:12px;flex-wrap:wrap;}
+.com-gr label{display:flex;gap:6px;align-items:center;font-size:12px;text-transform:none;letter-spacing:0;font-family:inherit;color:#0d1f35;}
+.modal textarea{width:100%;border:1px solid #c8d4e0;border-radius:4px;padding:8px;font-family:inherit;font-size:13px;color:#0d1f35;resize:vertical;}
+@media (max-width:760px){.com-exp-grid{grid-template-columns:1fr!important;}}
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1014,6 +1040,10 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
         </button>
         <button class="nav-item" onclick="abrirPerfil()" data-v="perfil" id="nav-perfil">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Mi perfil
+        </button>
+        <button class="nav-item" onclick="navTo('comunicados')" data-v="comunicados" id="nav-comunicados">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 15l2 2 4-4"/></svg>
+          Comunicados <span class="ni-badge" id="badge-com" style="display:none;background:#b42318;color:#fff;">0</span>
         </button>
       </div>
       <div class="sb-sec">
@@ -1658,9 +1688,103 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
         </div>
       </div>
 
+      <!-- COMUNICADOS (v2.38.0) -->
+      <div id="view-comunicados" class="view">
+        <div class="page-hdr">
+          <div><h2>Comunicados</h2><p id="com-sub">Comunicados oficiales y documentos con confirmación de lectura</p></div>
+          <div class="page-actions">
+            <button class="btn prim sm" id="com-btn-nuevo" style="display:none;" onclick="comAbrirNuevo()">+ Nuevo comunicado / llamado</button>
+          </div>
+        </div>
+        <div class="com-tabs" id="com-tabs" style="display:none;">
+          <button class="tri-tab on" data-t="mios" onclick="comTab('mios')">Mis comunicados</button>
+          <button class="tri-tab" data-t="gestion" onclick="comTab('gestion')">Gestión</button>
+          <button class="tri-tab" data-t="expedientes" onclick="comTab('expedientes')">Expedientes</button>
+        </div>
+        <div id="com-cuerpo"></div>
+      </div>
+
     </div><!-- /main -->
   </div><!-- /app-body -->
 </div><!-- /s-app -->
+
+<!-- MODAL FIRMAR COMUNICADO (v2.38.0) -->
+<div class="overlay" id="modal-com-firmar">
+  <div class="modal" style="width:620px;">
+    <div class="modal-hdr">
+      <h3 id="cf-titulo">Comunicado</h3>
+      <button class="modal-x" onclick="closeModal('modal-com-firmar')">✕</button>
+    </div>
+    <div id="cf-meta" style="margin-bottom:10px;"></div>
+    <div id="cf-desc"></div>
+    <div id="cf-pdf" style="margin-bottom:12px;"></div>
+    <div id="cf-zona-firma">
+      <div style="font-family:var(--mono);font-size:9px;color:#4e6c8a;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">Su firma</div>
+      <canvas id="cf-pad" class="com-firma-pad"></canvas>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+        <small style="color:#4e6c8a;font-size:11px;">Firme con el dedo o el mouse dentro del recuadro</small>
+        <button class="btn sm" type="button" onclick="comLimpiarFirma()">Borrar firma</button>
+      </div>
+      <label class="com-check"><input type="checkbox" id="cf-acepto"><span id="cf-acepto-txt">Confirmo que leí y entendí este comunicado.</span></label>
+      <div id="cf-err" style="color:#b42318;font-size:12px;min-height:16px;"></div>
+    </div>
+    <div id="cf-firmado" style="display:none;"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-com-firmar')">Cerrar</button>
+      <button class="btn prim" id="cf-btn" onclick="comFirmar()">Firmar y confirmar lectura</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUEVO COMUNICADO / LLAMADO (v2.38.0) -->
+<div class="overlay" id="modal-com-nuevo">
+  <div class="modal" style="width:600px;">
+    <div class="modal-hdr">
+      <h3>Nuevo comunicado o llamado de atención</h3>
+      <button class="modal-x" onclick="closeModal('modal-com-nuevo')">✕</button>
+    </div>
+    <div class="field"><label>Tipo</label>
+      <select id="cn-tipo" onchange="comNuevoTipo()">
+        <option value="comunicado">Comunicado general</option>
+        <option value="llamado_atencion">Llamado de atención (individual)</option>
+      </select>
+    </div>
+    <div class="field"><label>Título</label><input type="text" id="cn-titulo" placeholder="Ej.: Comunicado oficial — puntualidad y bioseguridad"></div>
+    <div class="field"><label>Fecha</label><input type="date" id="cn-fecha"></div>
+    <div class="field"><label>Documento PDF</label><input type="file" id="cn-pdf" accept="application/pdf"></div>
+    <div class="field"><label>Texto o resumen (opcional)</label><textarea id="cn-desc" rows="4" placeholder="Se muestra arriba del PDF al momento de firmar"></textarea></div>
+    <div id="cn-zona-grupos">
+      <div class="field"><label>Enviar a los grupos</label>
+        <div class="com-gr" id="cn-grupos"></div>
+      </div>
+      <div class="field"><label id="cn-dest-lbl">Destinatarios</label>
+        <div style="display:flex;gap:8px;margin-bottom:6px;"><button class="btn sm" type="button" onclick="comMarcarTodos(true)">Marcar todos</button><button class="btn sm" type="button" onclick="comMarcarTodos(false)">Desmarcar todos</button></div>
+        <div class="com-dest-list" id="cn-dest"></div>
+      </div>
+    </div>
+    <div id="cn-zona-uno" style="display:none;">
+      <div class="field"><label>Anestesiólogo</label><select id="cn-uno"></select></div>
+    </div>
+    <label class="com-check"><input type="checkbox" id="cn-firma" checked><span>Requiere firma de confirmación (lectura / recibido)</span></label>
+    <div id="cn-err" style="color:#b42318;font-size:12px;min-height:16px;"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-com-nuevo')">Cancelar</button>
+      <button class="btn prim" id="cn-btn" onclick="comGuardarNuevo()">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE COMUNICADO (v2.38.0) -->
+<div class="overlay" id="modal-com-detalle">
+  <div class="modal" style="width:680px;">
+    <div class="modal-hdr">
+      <h3 id="cd-titulo">Detalle</h3>
+      <button class="modal-x" onclick="closeModal('modal-com-detalle')">✕</button>
+    </div>
+    <div id="cd-cuerpo"></div>
+    <div class="modal-actions" id="cd-acciones"></div>
+  </div>
+</div>
 
 <!-- MODAL DISPONIBILIDAD -->
 <div class="overlay" id="modal-disp">
@@ -2437,6 +2561,13 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.38.0',n:'Comunicados con firma y expedientes',f:'2026-11-18',cambios:[
+    'Nuevo: sección "Comunicados" en el menú. Cada anestesiólogo ve ahí los comunicados oficiales y llamados de atención que se le envían, los lee (texto y PDF) y firma con el dedo o el mouse para confirmar lectura o recibido. La fecha y hora de la firma la registra el servidor y no se puede alterar.',
+    'Al ingresar, si hay documentos pendientes por firmar, la app lleva directo a Comunicados y muestra un contador rojo en el menú. El enlace agendaans.netlify.app/?comunicados (botón o QR del PDF) abre esta sección después de iniciar sesión.',
+    'Administrador: "+ Nuevo comunicado / llamado" — sube el PDF, elige grupos (SEDAR, Colsubsidio, IME, Consulta externa) y ajusta los destinatarios; o envía un llamado de atención a un solo anestesiólogo. En "Gestión" se ve quién lo vio y quién firmó, se copia la lista de pendientes para WhatsApp y se puede anular.',
+    'Administrador: "Expedientes" — una carpeta por anestesiólogo con todos sus comunicados, llamados de atención y firmas; cada firma genera un acta imprimible (o PDF) y se puede imprimir el expediente completo.',
+    'Requiere ejecutar una vez supabase/migracion_v2.38.0_comunicados.sql en el SQL Editor de Supabase (crea las tablas y el almacenamiento privado "expedientes").'
+  ]},
   {v:'2.37.0',n:'Sesión persistente, Mi perfil y usuarios por secciones',f:'2026-11-12',cambios:[
     'Sesión persistente: entras una vez en tu dispositivo y no vuelves a escribir la contraseña. El token se renueva solo mientras usas la app; se acabó el error "JWT expired" y las pantallas que quedaban en "0 disponibles" hasta recargar. Casilla "Mantener sesión iniciada" en el ingreso.',
     'Salir cierra la sesión solo en ese dispositivo y la revoca en el servidor.',
@@ -2965,6 +3096,7 @@ async function onLogin(user){
 
     show('s-app');
     navTo(esJefeEnf?'cancelaciones':'dashboard');
+    comRevisarPendientes(); // v2.38.0
     // v2.37.0 — contraseña temporal asignada por el administrador: obligar a cambiarla
     if(perfil.must_change_password) abrirCambiarPwd(true);
 
@@ -3176,6 +3308,7 @@ function navTo(v){
       ]).then(renderDist);
     },
     usuarios:()=>renderUsuarios(),
+    comunicados:()=>comRender(),
     perfil:()=>renderPerfil(),
     cancelaciones:()=>{
       Promise.all([cargarPerfiles(),cargarCancelaciones()]).then(renderCancelaciones);
@@ -9148,6 +9281,482 @@ document.addEventListener('click', e=>{
     abrirEditorDoc(td);
   }
 });
+
+// ══════════════════════════════════════════════════════════════
+//  COMUNICADOS, LLAMADOS DE ATENCION Y EXPEDIENTES (v2.38.0)
+//  Tablas: comunicados, comunicado_destinatarios (ver supabase/migracion_v2.38.0_comunicados.sql)
+//  Storage privado "expedientes":
+//    comunicados/<id>/<archivo>.pdf       → documento enviado
+//    <id_perfil>/firmas/<id>_<ts>.png     → firma de cada anestesiologo (su carpeta)
+// ══════════════════════════════════════════════════════════════
+const COM={mios:[],todos:[],tab:'mios',actual:null,expPerfil:null,expFilas:[],firmaHas:false};
+const COM_GRUPOS=['SEDAR','Colsubsidio','IME','Consulta externa'];
+const COM_BUCKET='expedientes';
+
+function comNombre(p){return p?((p.nombre||'')+' '+(p.apellidos||'')).trim():'—';}
+function comPerfil(id){return APP.perfiles.find(p=>p.id===id);}
+function comFmtTs(ts){
+  if(!ts) return '';
+  try{return new Date(ts).toLocaleString('es-CO',{timeZone:'America/Bogota',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return ts;}
+}
+function comFmtF(d){
+  if(!d) return '';
+  try{return new Date(d+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'});}catch(e){return d;}
+}
+function comTipoTag(t){return t==='llamado_atencion'?'<span class="com-tag lla">Llamado de atención</span>':'<span class="com-tag com">Comunicado</span>';}
+function comEstadoTag(d,c){
+  if(!c?.requiere_firma) return '<span class="com-tag ok">Informativo</span>';
+  return d.firmado_at?'<span class="com-tag ok">Firmado</span>':'<span class="com-tag pend">Pendiente</span>';
+}
+function comEsAnest(p){
+  if(!p||!p.activo) return false;
+  if(['viewer','jefe_enfermeria','interconsulta','hospitalario'].includes(p.rol)) return false;
+  if(p.seccion) return p.seccion==='anestesiologo';
+  return ['anestesiologo','admin','ime'].includes(p.rol);
+}
+function comGrupoDe(p){return p.grupo||p.empresa||'';}
+
+// ── Storage ──
+function comRuta(path){return path.split('/').map(encodeURIComponent).join('/');}
+async function comSubir(path,body,tipo){
+  const r=await fetchConTimeout(SUPA_URL+'/storage/v1/object/'+COM_BUCKET+'/'+comRuta(path),{
+    method:'POST',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_token(),'Content-Type':tipo},
+    body
+  },45000);
+  if(!r.ok){const t=await r.text().catch(()=>'');throw new Error('No se pudo subir el archivo ('+r.status+') '+t.slice(0,120));}
+  return path;
+}
+async function comUrl(path){
+  if(!path) return null;
+  try{
+    const r=await fetchConTimeout(SUPA_URL+'/storage/v1/object/sign/'+COM_BUCKET+'/'+comRuta(path),{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+_token(),'Content-Type':'application/json'},
+      body:JSON.stringify({expiresIn:3600})
+    });
+    if(!r.ok) return null;
+    const d=await r.json();
+    return d.signedURL?(SUPA_URL+'/storage/v1'+d.signedURL):null;
+  }catch(e){return null;}
+}
+async function comAbrirArchivo(path){
+  if(!path){toast('Este registro no tiene archivo.','info');return;}
+  const w=window.open('','_blank'); // se abre sincrono para que iOS no lo bloquee
+  const url=await comUrl(path);
+  if(!url){toast('No se pudo abrir el archivo.','error');if(w)w.close();return;}
+  if(w) w.location.href=url; else window.open(url,'_blank');
+}
+
+// ── Carga de datos ──
+async function comCargarMios(){
+  if(!APP.user) return [];
+  const {data,error}=await db.from('comunicado_destinatarios').select('*,comunicados(*)').eq('perfil_id',APP.user.id);
+  if(error){console.warn('comunicados:',error.message);COM.mios=[];return [];}
+  COM.mios=(data||[]).filter(d=>d.comunicados&&!d.comunicados.anulado)
+    .sort((a,b)=>(b.comunicados.fecha||'').localeCompare(a.comunicados.fecha||'')||(b.created_at||'').localeCompare(a.created_at||''));
+  comActualizarBadge();
+  return COM.mios;
+}
+function comPendientes(){return COM.mios.filter(d=>d.comunicados.requiere_firma&&!d.firmado_at);}
+function comActualizarBadge(){
+  const n=comPendientes().length;
+  const b=document.getElementById('badge-com');
+  if(b){b.textContent=n;b.style.display=n>0?'':'none';}
+}
+async function comCargarTodos(){
+  const {data,error}=await db.from('comunicados').select('*,comunicado_destinatarios(id,perfil_id,visto_at,firmado_at,firma_path)').order('created_at',{ascending:false});
+  if(error){toast('No se pudieron cargar los comunicados: '+error.message,'error');COM.todos=[];return;}
+  COM.todos=data||[];
+}
+
+// Al ingresar: si hay comunicados pendientes, se llevan al frente
+async function comRevisarPendientes(){
+  try{
+    await comCargarMios();
+    const viaEnlace=/[?&]comunicados?\b/.test(location.search);
+    if(viaEnlace){try{history.replaceState(null,'',location.pathname);}catch(e){}}
+    const pend=comPendientes();
+    if(pend.length||viaEnlace){
+      navTo('comunicados');
+      if(pend.length){
+        toast(pend.length===1?'Tienes 1 comunicado pendiente por firmar.':'Tienes '+pend.length+' comunicados pendientes por firmar.','info');
+        if(pend.length===1) setTimeout(()=>comAbrirFirmar(pend[0].id),300);
+      }
+    }
+  }catch(e){console.warn('comRevisarPendientes:',e);}
+}
+
+// ── Vista ──
+function comTab(t){
+  COM.tab=t;
+  document.querySelectorAll('#com-tabs .tri-tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  comPintar();
+}
+async function comRender(){
+  const admin=!!APP.canEdit;
+  const tabs=document.getElementById('com-tabs');if(tabs)tabs.style.display=admin?'':'none';
+  const bn=document.getElementById('com-btn-nuevo');if(bn)bn.style.display=admin?'':'none';
+  if(!admin) COM.tab='mios';
+  const c=document.getElementById('com-cuerpo');if(c)c.innerHTML='<div class="empty" style="padding:20px;color:#4e6c8a;">Cargando…</div>';
+  await comCargarMios();
+  if(admin&&COM.tab!=='mios') await comCargarTodos();
+  comPintar();
+}
+async function comPintar(){
+  const c=document.getElementById('com-cuerpo');if(!c)return;
+  if(COM.tab==='gestion'){ if(!COM.todos.length) await comCargarTodos(); c.innerHTML=comHtmlGestion(); return; }
+  if(COM.tab==='expedientes'){ c.innerHTML=comHtmlExpLista(); if(COM.expPerfil) comExpediente(COM.expPerfil); return; }
+  c.innerHTML=comHtmlMios();
+}
+function comHtmlMios(){
+  if(!COM.mios.length) return '<div class="panel-box" style="color:#4e6c8a;">No tienes comunicados por ahora.</div>';
+  const pend=comPendientes();
+  let h='';
+  if(pend.length) h+=`<div class="panel-box" style="border-color:#f5c26b;background:#fffaf0;color:#7a4b00;">Tienes <b>${pend.length}</b> ${pend.length===1?'documento pendiente':'documentos pendientes'} por firmar.</div>`;
+  h+=COM.mios.map(d=>{
+    const c=d.comunicados;
+    const accion=c.requiere_firma&&!d.firmado_at
+      ?`<button class="btn prim sm" onclick="comAbrirFirmar('${d.id}')">Leer y firmar</button>`
+      :`<button class="btn sm" onclick="comAbrirFirmar('${d.id}')">Ver</button>`;
+    const sub=d.firmado_at?'Firmado el '+comFmtTs(d.firmado_at):comFmtF(c.fecha);
+    return `<div class="com-item"><div class="ci-main"><div style="margin-bottom:4px;">${comTipoTag(c.tipo)} ${comEstadoTag(d,c)}</div><div class="ci-tit">${escH(c.titulo)}</div><div class="ci-sub">${escH(sub)}</div></div>${accion}</div>`;
+  }).join('');
+  return h;
+}
+
+// ── Firma ──
+function comAbrirFirmar(destId){
+  const d=COM.mios.find(x=>x.id===destId);if(!d)return;
+  const c=d.comunicados;COM.actual=d;
+  document.getElementById('cf-titulo').textContent=c.titulo;
+  document.getElementById('cf-meta').innerHTML=comTipoTag(c.tipo)+` <span style="font-family:var(--mono);font-size:10px;color:#4e6c8a;margin-left:6px;">${escH(comFmtF(c.fecha))}</span>`;
+  document.getElementById('cf-desc').innerHTML=c.descripcion?`<div class="com-desc">${escH(c.descripcion)}</div>`:'';
+  const pdf=document.getElementById('cf-pdf');
+  pdf.innerHTML=c.archivo_path?`<button class="btn" onclick="comAbrirArchivo('${escH(c.archivo_path)}')">📄 Abrir documento${c.archivo_nombre?': '+escH(c.archivo_nombre):''}</button><div id="cf-pdf-embed"></div>`:'';
+  const firmado=!!d.firmado_at, requiere=!!c.requiere_firma;
+  document.getElementById('cf-zona-firma').style.display=(!firmado&&requiere)?'':'none';
+  document.getElementById('cf-btn').style.display=(!firmado&&requiere)?'':'none';
+  document.getElementById('cf-acepto').checked=false;
+  document.getElementById('cf-acepto-txt').textContent=c.tipo==='llamado_atencion'
+    ?'Confirmo que recibí y leí este llamado de atención.'
+    :'Confirmo que leí y entendí este comunicado.';
+  document.getElementById('cf-err').textContent='';
+  const fz=document.getElementById('cf-firmado');
+  if(firmado){
+    fz.style.display='';
+    fz.innerHTML=`<div class="panel-box" style="background:#f2fbf6;border-color:#9fd8b8;color:#0a5a37;margin:0;">✔ Firmado el <b>${escH(comFmtTs(d.firmado_at))}</b><div id="cf-firma-img" style="margin-top:8px;"></div></div>`;
+    comUrl(d.firma_path).then(u=>{const el=document.getElementById('cf-firma-img');if(el&&u)el.innerHTML=`<img src="${u}" alt="Firma" style="max-width:260px;max-height:110px;background:#fff;border:1px solid #c8d4e0;border-radius:4px;">`;});
+  }else{fz.style.display='none';fz.innerHTML='';}
+  openModal('modal-com-firmar');
+  if(!firmado&&requiere) setTimeout(comPrepararPad,60);
+  // Vista previa del PDF en pantallas grandes (en celular se usa el boton)
+  if(c.archivo_path&&window.innerWidth>820){
+    comUrl(c.archivo_path).then(u=>{const el=document.getElementById('cf-pdf-embed');if(el&&u)el.innerHTML=`<iframe src="${u}" style="width:100%;height:420px;border:1px solid #c8d4e0;border-radius:4px;margin-top:8px;"></iframe>`;});
+  }
+  if(!d.visto_at) dbWrite('POST','rpc/marcar_comunicado_visto',{p_comunicado:c.id}).then(()=>{d.visto_at=new Date().toISOString();});
+}
+function comPrepararPad(){
+  const cv=document.getElementById('cf-pad');if(!cv)return;
+  const ctx=cv.getContext('2d');
+  const r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+  cv.width=Math.max(1,r.width*dpr);cv.height=Math.max(1,r.height*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#0b2545';
+  COM.firmaHas=false;
+  if(cv._listo) return;
+  cv._listo=true;
+  let dib=false,ult=null;
+  const pos=e=>{const b=cv.getBoundingClientRect();return {x:e.clientX-b.left,y:e.clientY-b.top};};
+  cv.addEventListener('pointerdown',e=>{dib=true;ult=pos(e);try{cv.setPointerCapture(e.pointerId);}catch(_){}e.preventDefault();});
+  cv.addEventListener('pointermove',e=>{
+    if(!dib)return;const p=pos(e),cx=cv.getContext('2d');
+    cx.beginPath();cx.moveTo(ult.x,ult.y);cx.lineTo(p.x,p.y);cx.stroke();ult=p;COM.firmaHas=true;e.preventDefault();
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(t=>cv.addEventListener(t,()=>{dib=false;}));
+}
+function comLimpiarFirma(){
+  const cv=document.getElementById('cf-pad');if(!cv)return;
+  const ctx=cv.getContext('2d');ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);ctx.restore();
+  COM.firmaHas=false;
+}
+async function comFirmar(){
+  const d=COM.actual;if(!d)return;
+  const err=document.getElementById('cf-err');err.textContent='';
+  if(!COM.firmaHas){err.textContent='Por favor firme dentro del recuadro.';return;}
+  if(!document.getElementById('cf-acepto').checked){err.textContent='Marque la casilla de confirmación.';return;}
+  const btn=document.getElementById('cf-btn');btn.disabled=true;btn.textContent='Firmando…';
+  try{
+    const cv=document.getElementById('cf-pad');
+    const out=document.createElement('canvas');out.width=cv.width;out.height=cv.height;
+    const o=out.getContext('2d');o.fillStyle='#fff';o.fillRect(0,0,out.width,out.height);o.drawImage(cv,0,0);
+    const blob=await new Promise(r=>out.toBlob(r,'image/png'));
+    const path=APP.user.id+'/firmas/'+d.comunicado_id+'_'+Date.now()+'.png';
+    await comSubir(path,blob,'image/png');
+    const {data,error}=await dbWrite('POST','rpc/firmar_comunicado',{p_comunicado:d.comunicado_id,p_firma_path:path,p_dispositivo:navigator.userAgent});
+    if(error) throw new Error(error.message);
+    d.firmado_at=(typeof data==='string'&&data)||new Date().toISOString();d.firma_path=path;
+    closeModal('modal-com-firmar');
+    toast('Firma registrada. ¡Gracias!','success');
+    await comCargarMios();
+    if(COM.tab==='mios') comPintar();
+  }catch(e){
+    err.textContent='No se pudo registrar la firma: '+e.message;
+  }finally{btn.disabled=false;btn.textContent='Firmar y confirmar lectura';}
+}
+
+// ── Gestion (administrador) ──
+function comHtmlGestion(){
+  if(!COM.todos.length) return '<div class="panel-box" style="color:#4e6c8a;">Aún no has enviado comunicados. Usa “+ Nuevo comunicado / llamado”.</div>';
+  return COM.todos.map(c=>{
+    const ds=c.comunicado_destinatarios||[];
+    const fir=ds.filter(x=>x.firmado_at).length,tot=ds.length;
+    const pct=tot?Math.round(fir*100/tot):0;
+    const quien=c.tipo==='llamado_atencion'&&ds[0]?' — '+escH(comNombre(comPerfil(ds[0].perfil_id))):'';
+    const avance=c.requiere_firma?`${fir}/${tot} firmados<div class="com-prog"><div style="width:${pct}%"></div></div>`:`${tot} destinatario(s) · sin firma`;
+    return `<div class="com-item" style="${c.anulado?'opacity:.55;':''}"><div class="ci-main"><div style="margin-bottom:4px;">${comTipoTag(c.tipo)}${c.anulado?' <span class="com-tag pend">Anulado</span>':''}</div><div class="ci-tit">${escH(c.titulo)}${quien}</div><div class="ci-sub">${escH(comFmtF(c.fecha))} · ${avance}</div></div><button class="btn sm" onclick="comDetalle('${c.id}')">Ver firmas</button></div>`;
+  }).join('');
+}
+function comDetalle(id){
+  const c=COM.todos.find(x=>x.id===id);if(!c)return;
+  document.getElementById('cd-titulo').textContent=c.titulo;
+  const ds=(c.comunicado_destinatarios||[]).slice().sort((a,b)=>(a.firmado_at?1:0)-(b.firmado_at?1:0)||comNombre(comPerfil(a.perfil_id)).localeCompare(comNombre(comPerfil(b.perfil_id))));
+  const fir=ds.filter(x=>x.firmado_at).length;
+  let h=`<div style="margin-bottom:10px;">${comTipoTag(c.tipo)} <span style="font-family:var(--mono);font-size:10px;color:#4e6c8a;margin-left:6px;">${escH(comFmtF(c.fecha))}${c.grupos?.length?' · '+escH(c.grupos.join(', ')):''}</span></div>`;
+  if(c.descripcion) h+=`<div class="com-desc">${escH(c.descripcion)}</div>`;
+  h+=`<div style="font-size:13px;margin-bottom:8px;color:#0d1f35;"><b>${fir}</b> de <b>${ds.length}</b> firmaron${c.requiere_firma?'':' (no requiere firma)'}.</div>`;
+  h+=`<table class="com-tbl"><thead><tr><th>Anestesiólogo</th><th>Visto</th><th>Firmado</th><th></th></tr></thead><tbody>`;
+  h+=ds.map(x=>{
+    const p=comPerfil(x.perfil_id);
+    return `<tr><td>${escH(comNombre(p))}<div style="font-family:var(--mono);font-size:9px;color:#4e6c8a;">${escH(p?.cedula||'')}</div></td>
+      <td style="font-size:11px;">${x.visto_at?escH(comFmtTs(x.visto_at)):'—'}</td>
+      <td style="font-size:11px;">${x.firmado_at?'<span class="com-tag ok">'+escH(comFmtTs(x.firmado_at))+'</span>':'<span class="com-tag pend">Pendiente</span>'}</td>
+      <td style="white-space:nowrap;">${x.firmado_at?`<button class="btn sm" onclick="comActa('${c.id}','${x.perfil_id}')">Acta</button>`:''}</td></tr>`;
+  }).join('');
+  h+='</tbody></table>';
+  document.getElementById('cd-cuerpo').innerHTML=h;
+  const pend=ds.filter(x=>!x.firmado_at).length;
+  document.getElementById('cd-acciones').innerHTML=
+    (c.archivo_path?`<button class="btn" onclick="comAbrirArchivo('${escH(c.archivo_path)}')">Abrir PDF</button>`:'')+
+    (pend&&c.requiere_firma?`<button class="btn" onclick="comCopiarPendientes('${c.id}')">Copiar pendientes</button>`:'')+
+    (!c.anulado?`<button class="btn" style="color:#b42318;" onclick="comAnular('${c.id}')">Anular</button>`:'')+
+    `<button class="btn prim" onclick="closeModal('modal-com-detalle')">Cerrar</button>`;
+  openModal('modal-com-detalle');
+}
+function comCopiarPendientes(id){
+  const c=COM.todos.find(x=>x.id===id);if(!c)return;
+  const nombres=(c.comunicado_destinatarios||[]).filter(x=>!x.firmado_at).map(x=>'• '+comNombre(comPerfil(x.perfil_id))).sort();
+  const txt=`*Pendientes por firmar: ${c.titulo}*\n${nombres.join('\n')}\n\nPor favor ingresen a AgendaANS → Comunicados para leer y firmar: ${location.origin}/?comunicados`;
+  (navigator.clipboard?.writeText(txt)||Promise.reject()).then(()=>toast('Lista copiada. Pégala en WhatsApp.','success')).catch(()=>prompt('Copia este texto:',txt));
+}
+async function comAnular(id){
+  if(!confirm('¿Anular este comunicado? Dejará de aparecerle a los anestesiólogos, pero se conservan las firmas ya registradas.')) return;
+  const {error}=await dbWrite('PATCH','comunicados?id=eq.'+id,{anulado:true});
+  if(error){toast('No se pudo anular: '+error.message,'error');return;}
+  closeModal('modal-com-detalle');toast('Comunicado anulado.','info');
+  await comCargarTodos();comPintar();
+}
+
+// ── Nuevo comunicado / llamado ──
+function comCandidatos(){return APP.perfiles.filter(comEsAnest).sort((a,b)=>comNombre(a).localeCompare(comNombre(b)));}
+function comAbrirNuevo(){
+  document.getElementById('cn-tipo').value='comunicado';
+  document.getElementById('cn-titulo').value='';
+  document.getElementById('cn-fecha').value=toISO(new Date());
+  document.getElementById('cn-pdf').value='';
+  document.getElementById('cn-desc').value='';
+  document.getElementById('cn-firma').checked=true;
+  document.getElementById('cn-err').textContent='';
+  document.getElementById('cn-grupos').innerHTML=COM_GRUPOS.map(g=>`<label><input type="checkbox" value="${escH(g)}" ${g==='SEDAR'?'checked':''} onchange="comPintarDest()"> ${escH(g)}</label>`).join('');
+  const sel=document.getElementById('cn-uno');
+  sel.innerHTML='<option value="">— Seleccionar —</option>'+comCandidatos().map(p=>`<option value="${p.id}">${escH(comNombre(p))}${comGrupoDe(p)?' ('+escH(comGrupoDe(p))+')':''}</option>`).join('');
+  customizarSelect('cn-tipo');customizarSelect('cn-uno');
+  sel.value='';
+  comNuevoTipo();comPintarDest();
+  openModal('modal-com-nuevo');
+}
+function comNuevoTipo(){
+  const lla=document.getElementById('cn-tipo').value==='llamado_atencion';
+  document.getElementById('cn-zona-grupos').style.display=lla?'none':'';
+  document.getElementById('cn-zona-uno').style.display=lla?'':'none';
+}
+function comGruposSel(){return Array.from(document.querySelectorAll('#cn-grupos input:checked')).map(i=>i.value);}
+function comPintarDest(){
+  const gs=comGruposSel();
+  const lista=comCandidatos().filter(p=>gs.includes(comGrupoDe(p)));
+  document.getElementById('cn-dest').innerHTML=lista.length
+    ?lista.map(p=>`<label><input type="checkbox" value="${p.id}" checked onchange="comContarDest()"> ${escH(comNombre(p))} <span style="color:#4e6c8a;font-size:10px;">${escH(comGrupoDe(p))}</span></label>`).join('')
+    :'<div style="color:#4e6c8a;font-size:12px;padding:4px 0;">No hay anestesiólogos activos en los grupos elegidos.</div>';
+  comContarDest();
+}
+function comContarDest(){
+  const n=document.querySelectorAll('#cn-dest input:checked').length;
+  document.getElementById('cn-dest-lbl').textContent='Destinatarios ('+n+')';
+}
+function comMarcarTodos(v){document.querySelectorAll('#cn-dest input').forEach(i=>i.checked=v);comContarDest();}
+async function comGuardarNuevo(){
+  const err=document.getElementById('cn-err');err.textContent='';
+  const tipo=document.getElementById('cn-tipo').value;
+  const titulo=document.getElementById('cn-titulo').value.trim();
+  const fecha=document.getElementById('cn-fecha').value||toISO(new Date());
+  const file=document.getElementById('cn-pdf').files[0]||null;
+  const desc=document.getElementById('cn-desc').value.trim();
+  const requiere=document.getElementById('cn-firma').checked;
+  let dests=[],grupos=[];
+  if(tipo==='llamado_atencion'){
+    const uno=document.getElementById('cn-uno').value;if(uno) dests=[uno];
+  }else{
+    grupos=comGruposSel();
+    dests=Array.from(document.querySelectorAll('#cn-dest input:checked')).map(i=>i.value);
+  }
+  if(!titulo){err.textContent='Escribe el título.';return;}
+  if(!file&&!desc){err.textContent='Adjunta el PDF o escribe el texto del comunicado.';return;}
+  if(file&&file.type&&file.type!=='application/pdf'){err.textContent='El documento debe ser un PDF.';return;}
+  if(file&&file.size>15*1024*1024){err.textContent='El PDF supera 15 MB.';return;}
+  if(!dests.length){err.textContent=tipo==='llamado_atencion'?'Elige el anestesiólogo.':'No hay destinatarios marcados.';return;}
+  const btn=document.getElementById('cn-btn');btn.disabled=true;btn.textContent='Enviando…';
+  let creado=null;
+  try{
+    const r1=await dbWrite('POST','comunicados',{tipo,titulo,fecha,descripcion:desc||null,requiere_firma:requiere,grupos});
+    if(r1.error||!r1.data?.id) throw new Error(r1.error?.message||'No se creó el comunicado');
+    creado=r1.data;
+    if(file){
+      const nombre=(file.name||'documento.pdf').replace(/[^a-zA-Z0-9._-]/g,'_');
+      const path='comunicados/'+creado.id+'/'+nombre;
+      await comSubir(path,file,'application/pdf');
+      const r2=await dbWrite('PATCH','comunicados?id=eq.'+creado.id,{archivo_path:path,archivo_nombre:file.name||nombre});
+      if(r2.error) throw new Error(r2.error.message);
+    }
+    const r3=await dbWrite('POST','comunicado_destinatarios',dests.map(pid=>({comunicado_id:creado.id,perfil_id:pid})));
+    if(r3.error) throw new Error(r3.error.message);
+    closeModal('modal-com-nuevo');
+    toast((tipo==='llamado_atencion'?'Llamado de atención enviado':'Comunicado enviado a '+dests.length+' anestesiólogo(s)')+'.','success');
+    COM.tab='gestion';
+    document.querySelectorAll('#com-tabs .tri-tab').forEach(b=>b.classList.toggle('on',b.dataset.t==='gestion'));
+    await comCargarTodos();await comCargarMios();comPintar();
+  }catch(e){
+    err.textContent='Error: '+e.message;
+    if(creado?.id) await dbWrite('DELETE','comunicados?id=eq.'+creado.id).catch(()=>{});
+  }finally{btn.disabled=false;btn.textContent='Enviar';}
+}
+
+// ── Expedientes (carpeta por anestesiologo) ──
+function comHtmlExpLista(){
+  const docs=comCandidatos();
+  const sel=COM.expPerfil;
+  return `<div style="display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:14px;align-items:start;" class="com-exp-grid">
+    <div class="panel-box" style="padding:10px;">
+      <input type="search" id="com-exp-buscar" placeholder="Buscar anestesiólogo" oninput="comFiltrarExp()" style="width:100%;padding:7px 9px;border:1px solid #c8d4e0;border-radius:4px;margin-bottom:8px;color:#0d1f35;">
+      <div id="com-exp-lista" style="max-height:60vh;overflow:auto;">${docs.map(p=>`<div class="com-exp-p" data-n="${escH(comNombre(p).toLowerCase())}" onclick="comExpediente('${p.id}')" style="padding:7px 8px;border-radius:4px;cursor:pointer;font-size:13px;color:#0d1f35;${sel===p.id?'background:#e3effd;font-weight:600;':''}">📁 ${escH(comNombre(p))}<div style="font-family:var(--mono);font-size:9px;color:#4e6c8a;">${escH(comGrupoDe(p))}</div></div>`).join('')}</div>
+    </div>
+    <div id="com-exp-detalle"><div class="panel-box" style="color:#4e6c8a;">Elige un anestesiólogo para ver su carpeta: comunicados, llamados de atención y firmas.</div></div>
+  </div>`;
+}
+function comFiltrarExp(){
+  const q=(document.getElementById('com-exp-buscar').value||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  document.querySelectorAll('.com-exp-p').forEach(el=>{
+    const n=(el.dataset.n||'').normalize('NFD').replace(/[̀-ͯ]/g,'');
+    el.style.display=!q||n.includes(q)?'':'none';
+  });
+}
+async function comExpediente(pid){
+  COM.expPerfil=pid;
+  document.querySelectorAll('.com-exp-p').forEach(el=>{
+    const on=el.getAttribute('onclick')===`comExpediente('${pid}')`;
+    el.style.background=on?'#e3effd':'';el.style.fontWeight=on?'600':'';
+  });
+  const box=document.getElementById('com-exp-detalle');if(!box)return;
+  box.innerHTML='<div class="panel-box" style="color:#4e6c8a;">Cargando carpeta…</div>';
+  const {data,error}=await db.from('comunicado_destinatarios').select('*,comunicados(*)').eq('perfil_id',pid);
+  if(error){box.innerHTML=`<div class="panel-box" style="color:#b42318;">Error: ${escH(error.message)}</div>`;return;}
+  const filas=(data||[]).filter(d=>d.comunicados).sort((a,b)=>(b.comunicados.fecha||'').localeCompare(a.comunicados.fecha||''));
+  COM.expFilas=filas;
+  const p=comPerfil(pid);
+  const nLla=filas.filter(f=>f.comunicados.tipo==='llamado_atencion').length;
+  const nPend=filas.filter(f=>f.comunicados.requiere_firma&&!f.firmado_at&&!f.comunicados.anulado).length;
+  let h=`<div class="panel-box"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+    <div><div style="font-size:16px;font-weight:600;color:#0d1f35;">📁 ${escH(comNombre(p))}</div>
+    <div style="font-family:var(--mono);font-size:10px;color:#4e6c8a;margin-top:3px;">C.C. ${escH(p?.cedula||'—')} · ${escH(comGrupoDe(p||{}))}</div>
+    <div style="font-size:12px;margin-top:6px;color:#0d1f35;">${filas.length} documento(s) · <b style="color:#b42318;">${nLla}</b> llamado(s) de atención · <b style="color:#b45309;">${nPend}</b> pendiente(s)</div></div>
+    ${filas.length?`<button class="btn sm" onclick="comImprimirExpediente()">Imprimir expediente</button>`:''}
+  </div></div>`;
+  if(!filas.length) h+='<div class="panel-box" style="color:#4e6c8a;">Sin documentos en su carpeta.</div>';
+  else{
+    h+=`<div class="panel-box" style="padding:0;overflow:auto;"><table class="com-tbl"><thead><tr><th>Fecha</th><th>Documento</th><th>Estado</th><th></th></tr></thead><tbody>`;
+    h+=filas.map(f=>{const c=f.comunicados;return `<tr style="${c.anulado?'opacity:.55;':''}"><td style="white-space:nowrap;font-size:11px;">${escH(comFmtF(c.fecha))}</td>
+      <td>${comTipoTag(c.tipo)}<div style="margin-top:3px;">${escH(c.titulo)}${c.anulado?' <span class="com-tag pend">Anulado</span>':''}</div></td>
+      <td style="font-size:11px;">${comEstadoTag(f,c)}${f.firmado_at?'<div style="margin-top:3px;">'+escH(comFmtTs(f.firmado_at))+'</div>':''}</td>
+      <td style="white-space:nowrap;">${c.archivo_path?`<button class="btn sm" onclick="comAbrirArchivo('${escH(c.archivo_path)}')">PDF</button> `:''}${f.firmado_at?`<button class="btn sm" onclick="comActa('${c.id}','${pid}')">Acta</button>`:''}</td></tr>`;}).join('');
+    h+='</tbody></table></div>';
+  }
+  box.innerHTML=h;
+}
+
+// ── Acta de confirmacion (imprimible / PDF) ──
+function comActaHtml(c,f,p,firmaUrl){
+  const lla=c.tipo==='llamado_atencion';
+  return `<div class="acta">
+    <div class="hdr"><div><b>SERVICIOS ESPECIALIZADOS EN ANESTESIA Y REANIMACIÓN SEDAR</b><br>NIT 900.460.519-8</div><div class="app">AgendaANS</div></div>
+    <h2>${lla?'CONSTANCIA DE RECIBIDO — LLAMADO DE ATENCIÓN':'ACTA DE CONFIRMACIÓN DE LECTURA'}</h2>
+    <table>
+      <tr><th>Documento</th><td>${escH(c.titulo)}</td></tr>
+      <tr><th>Fecha del documento</th><td>${escH(comFmtF(c.fecha))}</td></tr>
+      <tr><th>Anestesiólogo</th><td>${escH(f.firma_nombre||comNombre(p))}</td></tr>
+      <tr><th>Cédula</th><td>${escH(f.firma_cedula||p?.cedula||'')}</td></tr>
+      <tr><th>Primera lectura</th><td>${escH(comFmtTs(f.visto_at)||'—')}</td></tr>
+      <tr><th>Fecha y hora de firma</th><td>${escH(comFmtTs(f.firmado_at))} (hora Colombia, registrada por el servidor)</td></tr>
+    </table>
+    <p>${lla?'El anestesiólogo firmante confirma que recibió y leyó el llamado de atención descrito.':'El anestesiólogo firmante confirma que leyó y entendió el comunicado descrito.'}</p>
+    <div class="firma">${firmaUrl?`<img src="${firmaUrl}">`:'<i>Firma no disponible</i>'}<div class="ln">${escH(f.firma_nombre||comNombre(p))}</div></div>
+    <div class="pie">Registro ${escH(f.id)} · Dispositivo: ${escH((f.dispositivo||'').slice(0,120))}</div>
+  </div>`;
+}
+const COM_ACTA_CSS=`body{font-family:Helvetica,Arial,sans-serif;color:#111;margin:0;padding:24px;}
+.acta{max-width:720px;margin:0 auto 30px;page-break-after:always;}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;font-size:12px;border-bottom:2px solid #1B8FC6;padding-bottom:8px;}
+.app{font-size:11px;color:#666;}
+h2{text-align:center;font-size:15px;margin:22px 0 14px;}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px;}
+th{text-align:left;width:34%;background:#f2f6fa;padding:6px 8px;border:1px solid #d5dde5;}
+td{padding:6px 8px;border:1px solid #d5dde5;}
+p{font-size:12px;}
+.firma{margin-top:26px;width:280px;}
+.firma img{max-width:260px;max-height:110px;}
+.ln{border-top:1px solid #333;font-size:11px;padding-top:4px;margin-top:2px;}
+.pie{font-size:9px;color:#888;margin-top:24px;}
+@media print{body{padding:0;}}`;
+async function comAbrirImpresion(titulo,partes){
+  const w=window.open('','_blank');
+  if(!w){toast('Permite las ventanas emergentes para imprimir el acta.','error');return null;}
+  w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>${escH(titulo)}</title><style>${COM_ACTA_CSS}</style></head><body><p style="font-family:sans-serif;color:#666;">Preparando…</p></body></html>`);
+  w.document.close();
+  const html=await partes();
+  w.document.body.innerHTML=html;
+  const imgs=Array.from(w.document.images);
+  await Promise.all(imgs.map(i=>i.complete?1:new Promise(r=>{i.onload=i.onerror=r;})));
+  setTimeout(()=>{try{w.focus();w.print();}catch(e){}},200);
+  return w;
+}
+async function comActa(cid,pid){
+  let f=COM.expFilas.find(x=>x.comunicado_id===cid&&x.perfil_id===pid);
+  let c=f?.comunicados;
+  if(!f){
+    const {data}=await db.from('comunicado_destinatarios').select('*,comunicados(*)').eq('comunicado_id',cid).eq('perfil_id',pid).maybeSingle();
+    f=data;c=data?.comunicados;
+  }
+  if(!f||!c){toast('No se encontró el registro.','error');return;}
+  const p=comPerfil(pid);
+  comAbrirImpresion('Acta — '+comNombre(p),async()=>comActaHtml(c,f,p,await comUrl(f.firma_path)));
+}
+function comImprimirExpediente(){
+  const pid=COM.expPerfil,p=comPerfil(pid);
+  const filas=COM.expFilas.filter(f=>f.firmado_at);
+  if(!filas.length){toast('No hay documentos firmados para imprimir.','info');return;}
+  comAbrirImpresion('Expediente — '+comNombre(p),async()=>{
+    const urls=await Promise.all(filas.map(f=>comUrl(f.firma_path)));
+    return filas.map((f,i)=>comActaHtml(f.comunicados,f,p,urls[i])).join('');
+  });
+}
 
 // ══════════════════════════════════════════════════════════════
 //  START
