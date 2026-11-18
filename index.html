@@ -2561,6 +2561,12 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.38.1',n:'Consecutivos de comunicados y llamados',f:'2026-11-18',cambios:[
+    'Nuevo: cada comunicado general recibe un consecutivo por año (N.º 001-2026, 002-2026…) y cada llamado de atención un consecutivo propio por anestesiólogo (Llamado N.º 1, 2, 3…).',
+    'Los números los asigna la base de datos al crear el documento: no se repiten, no se pueden editar y un comunicado anulado conserva el suyo.',
+    'El consecutivo aparece en Mis comunicados, Gestión, Expedientes, la ventana de firma, el acta imprimible y la lista de pendientes para WhatsApp.',
+    'Requiere ejecutar una vez supabase/migracion_v2.38.1_consecutivos.sql en el SQL Editor de Supabase.'
+  ]},
   {v:'2.38.0',n:'Comunicados con firma y expedientes',f:'2026-11-18',cambios:[
     'Nuevo: sección "Comunicados" en el menú. Cada anestesiólogo ve ahí los comunicados oficiales y llamados de atención que se le envían, los lee (texto y PDF) y firma con el dedo o el mouse para confirmar lectura o recibido. La fecha y hora de la firma la registra el servidor y no se puede alterar.',
     'Al ingresar, si hay documentos pendientes por firmar, la app lleva directo a Comunicados y muestra un contador rojo en el menú. El enlace agendaans.netlify.app/?comunicados (botón o QR del PDF) abre esta sección después de iniciar sesión.',
@@ -9303,6 +9309,12 @@ function comFmtF(d){
   if(!d) return '';
   try{return new Date(d+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'});}catch(e){return d;}
 }
+function comNum(c){
+  if(!c||!c.consecutivo) return '';
+  if(c.tipo==='llamado_atencion') return 'Llamado N.º '+c.consecutivo;
+  return 'N.º '+String(c.consecutivo).padStart(3,'0')+'-'+(c.anio||String(c.fecha||'').slice(0,4));
+}
+function comNumHtml(c){const n=comNum(c);return n?`<span style="font-family:var(--mono);font-size:10px;font-weight:700;color:#0d1f35;margin-left:6px;">${escH(n)}</span>`:'';}
 function comTipoTag(t){return t==='llamado_atencion'?'<span class="com-tag lla">Llamado de atención</span>':'<span class="com-tag com">Comunicado</span>';}
 function comEstadoTag(d,c){
   if(!c?.requiere_firma) return '<span class="com-tag ok">Informativo</span>';
@@ -9420,7 +9432,7 @@ function comHtmlMios(){
       ?`<button class="btn prim sm" onclick="comAbrirFirmar('${d.id}')">Leer y firmar</button>`
       :`<button class="btn sm" onclick="comAbrirFirmar('${d.id}')">Ver</button>`;
     const sub=d.firmado_at?'Firmado el '+comFmtTs(d.firmado_at):comFmtF(c.fecha);
-    return `<div class="com-item"><div class="ci-main"><div style="margin-bottom:4px;">${comTipoTag(c.tipo)} ${comEstadoTag(d,c)}</div><div class="ci-tit">${escH(c.titulo)}</div><div class="ci-sub">${escH(sub)}</div></div>${accion}</div>`;
+    return `<div class="com-item"><div class="ci-main"><div style="margin-bottom:4px;">${comTipoTag(c.tipo)} ${comEstadoTag(d,c)}${comNumHtml(c)}</div><div class="ci-tit">${escH(c.titulo)}</div><div class="ci-sub">${escH(sub)}</div></div>${accion}</div>`;
   }).join('');
   return h;
 }
@@ -9430,7 +9442,7 @@ function comAbrirFirmar(destId){
   const d=COM.mios.find(x=>x.id===destId);if(!d)return;
   const c=d.comunicados;COM.actual=d;
   document.getElementById('cf-titulo').textContent=c.titulo;
-  document.getElementById('cf-meta').innerHTML=comTipoTag(c.tipo)+` <span style="font-family:var(--mono);font-size:10px;color:#4e6c8a;margin-left:6px;">${escH(comFmtF(c.fecha))}</span>`;
+  document.getElementById('cf-meta').innerHTML=comTipoTag(c.tipo)+comNumHtml(c)+` <span style="font-family:var(--mono);font-size:10px;color:#4e6c8a;margin-left:6px;">${escH(comFmtF(c.fecha))}</span>`;
   document.getElementById('cf-desc').innerHTML=c.descripcion?`<div class="com-desc">${escH(c.descripcion)}</div>`:'';
   const pdf=document.getElementById('cf-pdf');
   pdf.innerHTML=c.archivo_path?`<button class="btn" onclick="comAbrirArchivo('${escH(c.archivo_path)}')">📄 Abrir documento${c.archivo_nombre?': '+escH(c.archivo_nombre):''}</button><div id="cf-pdf-embed"></div>`:'';
@@ -9514,7 +9526,7 @@ function comHtmlGestion(){
     const pct=tot?Math.round(fir*100/tot):0;
     const quien=c.tipo==='llamado_atencion'&&ds[0]?' — '+escH(comNombre(comPerfil(ds[0].perfil_id))):'';
     const avance=c.requiere_firma?`${fir}/${tot} firmados<div class="com-prog"><div style="width:${pct}%"></div></div>`:`${tot} destinatario(s) · sin firma`;
-    return `<div class="com-item" style="${c.anulado?'opacity:.55;':''}"><div class="ci-main"><div style="margin-bottom:4px;">${comTipoTag(c.tipo)}${c.anulado?' <span class="com-tag pend">Anulado</span>':''}</div><div class="ci-tit">${escH(c.titulo)}${quien}</div><div class="ci-sub">${escH(comFmtF(c.fecha))} · ${avance}</div></div><button class="btn sm" onclick="comDetalle('${c.id}')">Ver firmas</button></div>`;
+    return `<div class="com-item" style="${c.anulado?'opacity:.55;':''}"><div class="ci-main"><div style="margin-bottom:4px;">${comTipoTag(c.tipo)}${comNumHtml(c)}${c.anulado?' <span class="com-tag pend">Anulado</span>':''}</div><div class="ci-tit">${escH(c.titulo)}${quien}</div><div class="ci-sub">${escH(comFmtF(c.fecha))} · ${avance}</div></div><button class="btn sm" onclick="comDetalle('${c.id}')">Ver firmas</button></div>`;
   }).join('');
 }
 function comDetalle(id){
@@ -9522,7 +9534,7 @@ function comDetalle(id){
   document.getElementById('cd-titulo').textContent=c.titulo;
   const ds=(c.comunicado_destinatarios||[]).slice().sort((a,b)=>(a.firmado_at?1:0)-(b.firmado_at?1:0)||comNombre(comPerfil(a.perfil_id)).localeCompare(comNombre(comPerfil(b.perfil_id))));
   const fir=ds.filter(x=>x.firmado_at).length;
-  let h=`<div style="margin-bottom:10px;">${comTipoTag(c.tipo)} <span style="font-family:var(--mono);font-size:10px;color:#4e6c8a;margin-left:6px;">${escH(comFmtF(c.fecha))}${c.grupos?.length?' · '+escH(c.grupos.join(', ')):''}</span></div>`;
+  let h=`<div style="margin-bottom:10px;">${comTipoTag(c.tipo)}${comNumHtml(c)} <span style="font-family:var(--mono);font-size:10px;color:#4e6c8a;margin-left:6px;">${escH(comFmtF(c.fecha))}${c.grupos?.length?' · '+escH(c.grupos.join(', ')):''}</span></div>`;
   if(c.descripcion) h+=`<div class="com-desc">${escH(c.descripcion)}</div>`;
   h+=`<div style="font-size:13px;margin-bottom:8px;color:#0d1f35;"><b>${fir}</b> de <b>${ds.length}</b> firmaron${c.requiere_firma?'':' (no requiere firma)'}.</div>`;
   h+=`<table class="com-tbl"><thead><tr><th>Anestesiólogo</th><th>Visto</th><th>Firmado</th><th></th></tr></thead><tbody>`;
@@ -9546,7 +9558,7 @@ function comDetalle(id){
 function comCopiarPendientes(id){
   const c=COM.todos.find(x=>x.id===id);if(!c)return;
   const nombres=(c.comunicado_destinatarios||[]).filter(x=>!x.firmado_at).map(x=>'• '+comNombre(comPerfil(x.perfil_id))).sort();
-  const txt=`*Pendientes por firmar: ${c.titulo}*\n${nombres.join('\n')}\n\nPor favor ingresen a AgendaANS → Comunicados para leer y firmar: ${location.origin}/?comunicados`;
+  const txt=`*Pendientes por firmar: ${c.titulo}${comNum(c)?' ('+comNum(c)+')':''}*\n${nombres.join('\n')}\n\nPor favor ingresen a AgendaANS → Comunicados para leer y firmar: ${location.origin}/?comunicados`;
   (navigator.clipboard?.writeText(txt)||Promise.reject()).then(()=>toast('Lista copiada. Pégala en WhatsApp.','success')).catch(()=>prompt('Copia este texto:',txt));
 }
 async function comAnular(id){
@@ -9617,7 +9629,7 @@ async function comGuardarNuevo(){
   const btn=document.getElementById('cn-btn');btn.disabled=true;btn.textContent='Enviando…';
   let creado=null;
   try{
-    const r1=await dbWrite('POST','comunicados',{tipo,titulo,fecha,descripcion:desc||null,requiere_firma:requiere,grupos});
+    const r1=await dbWrite('POST','comunicados',{tipo,titulo,fecha,descripcion:desc||null,requiere_firma:requiere,grupos,perfil_llamado:tipo==='llamado_atencion'?dests[0]:null});
     if(r1.error||!r1.data?.id) throw new Error(r1.error?.message||'No se creó el comunicado');
     creado=r1.data;
     if(file){
@@ -9630,7 +9642,8 @@ async function comGuardarNuevo(){
     const r3=await dbWrite('POST','comunicado_destinatarios',dests.map(pid=>({comunicado_id:creado.id,perfil_id:pid})));
     if(r3.error) throw new Error(r3.error.message);
     closeModal('modal-com-nuevo');
-    toast((tipo==='llamado_atencion'?'Llamado de atención enviado':'Comunicado enviado a '+dests.length+' anestesiólogo(s)')+'.','success');
+    const numTxt=r1.data?.consecutivo?' ('+comNum(r1.data)+')':'';
+    toast((tipo==='llamado_atencion'?'Llamado de atención enviado'+numTxt:'Comunicado'+numTxt+' enviado a '+dests.length+' anestesiólogo(s)')+'.','success');
     COM.tab='gestion';
     document.querySelectorAll('#com-tabs .tri-tab').forEach(b=>b.classList.toggle('on',b.dataset.t==='gestion'));
     await comCargarTodos();await comCargarMios();comPintar();
@@ -9684,7 +9697,7 @@ async function comExpediente(pid){
   else{
     h+=`<div class="panel-box" style="padding:0;overflow:auto;"><table class="com-tbl"><thead><tr><th>Fecha</th><th>Documento</th><th>Estado</th><th></th></tr></thead><tbody>`;
     h+=filas.map(f=>{const c=f.comunicados;return `<tr style="${c.anulado?'opacity:.55;':''}"><td style="white-space:nowrap;font-size:11px;">${escH(comFmtF(c.fecha))}</td>
-      <td>${comTipoTag(c.tipo)}<div style="margin-top:3px;">${escH(c.titulo)}${c.anulado?' <span class="com-tag pend">Anulado</span>':''}</div></td>
+      <td>${comTipoTag(c.tipo)}${comNumHtml(c)}<div style="margin-top:3px;">${escH(c.titulo)}${c.anulado?' <span class="com-tag pend">Anulado</span>':''}</div></td>
       <td style="font-size:11px;">${comEstadoTag(f,c)}${f.firmado_at?'<div style="margin-top:3px;">'+escH(comFmtTs(f.firmado_at))+'</div>':''}</td>
       <td style="white-space:nowrap;">${c.archivo_path?`<button class="btn sm" onclick="comAbrirArchivo('${escH(c.archivo_path)}')">PDF</button> `:''}${f.firmado_at?`<button class="btn sm" onclick="comActa('${c.id}','${pid}')">Acta</button>`:''}</td></tr>`;}).join('');
     h+='</tbody></table></div>';
@@ -9700,6 +9713,7 @@ function comActaHtml(c,f,p,firmaUrl){
     <h2>${lla?'CONSTANCIA DE RECIBIDO — LLAMADO DE ATENCIÓN':'ACTA DE CONFIRMACIÓN DE LECTURA'}</h2>
     <table>
       <tr><th>Documento</th><td>${escH(c.titulo)}</td></tr>
+      <tr><th>Consecutivo</th><td>${escH(comNum(c)||'—')}</td></tr>
       <tr><th>Fecha del documento</th><td>${escH(comFmtF(c.fecha))}</td></tr>
       <tr><th>Anestesiólogo</th><td>${escH(f.firma_nombre||comNombre(p))}</td></tr>
       <tr><th>Cédula</th><td>${escH(f.firma_cedula||p?.cedula||'')}</td></tr>
