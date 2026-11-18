@@ -1615,6 +1615,7 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
           <div><h2 id="pf-titulo">Mi perfil</h2><p id="pf-sub">—</p></div>
           <div class="page-actions">
             <button class="btn sm" id="pf-volver" style="display:none;" onclick="navTo('usuarios')">← Usuarios</button>
+            <button class="btn sm" id="pf-btn-exp" style="display:none;" onclick="comIrExpediente(document.getElementById('pf-id').value)">📁 Expediente de comunicados</button>
           </div>
         </div>
         <div class="pf-grid">
@@ -1630,7 +1631,7 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
               <div class="field"><label>Teléfono</label><input type="tel" id="pf-tel"></div>
             </div>
             <div class="field"><label>Correo electrónico</label><input type="email" id="pf-email" placeholder="correo@ejemplo.com">
-              <div class="pf-ayuda">Aquí llega el enlace de recuperación de contraseña. Puedes seguir entrando con tu cédula.</div></div>
+              <div class="pf-ayuda">Puedes cambiarlo cuando quieras y pulsar “Guardar cambios”: desde ese momento ingresas con este correo (o con tu cédula) y aquí te llega el enlace si olvidas la contraseña.</div></div>
             <div class="grid2">
               <div class="field"><label>Registro médico</label><input type="text" id="pf-rm"></div>
               <div class="field"><label>Especialidad</label>
@@ -1670,7 +1671,7 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
           <div style="display:flex;flex-direction:column;gap:14px;">
             <div class="panel-box" style="padding:16px;" id="pf-box-pwd">
               <div class="pf-sec">Contraseña</div>
-              <div class="pf-ayuda" id="pf-pwd-ayuda" style="margin-bottom:10px;">Nadie, ni el administrador, puede ver tu contraseña.</div>
+              <div class="pf-ayuda" id="pf-pwd-ayuda" style="margin-bottom:10px;">Para cambiarla escribe tu contraseña actual y la nueva. Si la olvidaste, usa “Recuperar contraseña” y te llegará un enlace al correo.</div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <button class="btn prim sm" onclick="pfCambiarPwd()">Cambiar contraseña</button>
                 <button class="btn sm" id="pf-btn-recup" onclick="pfRecuperarPwd()">Recuperar contraseña</button>
@@ -1719,6 +1720,7 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
     <div id="cf-desc"></div>
     <div id="cf-pdf" style="margin-bottom:12px;"></div>
     <div id="cf-zona-firma">
+      <div id="cf-datos" class="panel-box" style="padding:12px 14px;margin-bottom:12px;background:#f7f9fc;"></div>
       <div style="font-family:var(--mono);font-size:9px;color:#4e6c8a;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;">Su firma</div>
       <canvas id="cf-pad" class="com-firma-pad"></canvas>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
@@ -2561,6 +2563,14 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.38.2',n:'Datos obligatorios al firmar comunicados',f:'2026-11-18',cambios:[
+    'Nuevo: antes de firmar un comunicado o llamado de atención, cada anestesiólogo ve sus datos. Si no tiene registrada la cédula (o documento de identificación) o el registro médico en AgendaANS, debe escribirlos para poder firmar; quedan guardados en su perfil.',
+    'El registro médico se puede actualizar en ese mismo momento. La cédula ya registrada no se cambia desde ahí (se usa para ingresar a la app); si está errada se corrige en Mi perfil.',
+    'Se valida que el documento no esté ya registrado en otro usuario. El acta de confirmación ahora incluye el registro médico, y Gestión muestra cédula y registro médico de cada destinatario.',
+    'En la misma ventana de firma cada anestesiólogo puede actualizar su teléfono y su correo; todo lo que cambie queda guardado en su perfil, y el correo nuevo sirve de inmediato para ingresar y recuperar la contraseña.',
+    'Mi perfil: cambiar el correo (con aviso de confirmación) y la contraseña es más claro. Se quitaron los mensajes sobre lo que el administrador no puede ver.',
+    'Administrador: desde cada perfil hay un botón "Expediente de comunicados", y desde cada expediente uno de "Datos personales" (con cédula, registro médico, teléfono y correo).'
+  ]},
   {v:'2.38.1',n:'Consecutivos de comunicados y llamados',f:'2026-11-18',cambios:[
     'Nuevo: cada comunicado general recibe un consecutivo por año (N.º 001-2026, 002-2026…) y cada llamado de atención un consecutivo propio por anestesiólogo (Llamado N.º 1, 2, 3…).',
     'Los números los asigna la base de datos al crear el documento: no se repiten, no se pueden editar y un comunicado anulado conserva el suyo.',
@@ -7448,8 +7458,9 @@ async function renderPerfil(){
   $('pf-box-pwd').style.display=soloVer?'none':'';
   $('pf-btn-recup').textContent=modo==='admin'?'Enviar recuperación':'Recuperar contraseña';
   $('pf-pwd-ayuda').textContent=modo==='admin'
-    ?'El administrador no puede ver la contraseña actual de nadie; solo asignar una temporal o enviar el enlace de recuperación.'
-    :'Nadie, ni el administrador, puede ver tu contraseña.';
+    ?'Asigna una contraseña temporal (se le pedirá cambiarla al ingresar) o envíale el enlace de recuperación a su correo.'
+    :'Para cambiarla escribe tu contraseña actual y la nueva. Si la olvidaste, usa “Recuperar contraseña” y te llegará un enlace al correo.';
+  const bexp=$('pf-btn-exp');if(bexp)bexp.style.display=(APP.canEdit&&seccionDe(p)==='anestesiologo')?'':'none';
   $('pf-err').className='err-msg';
   if(esAdminVista) ['pf-seccion','pf-grupo','pf-empresa','pf-rol','pf-activo'].forEach(x=>{try{customizarSelect(x);}catch(e){}});
   try{customizarSelect('pf-esp');}catch(e){}
@@ -7498,7 +7509,13 @@ async function guardarPerfil(){
   // Pasar el correo a Auth para que la recuperacion de contraseña llegue a ese correo
   if(correo&&correo.toLowerCase()!==String(p.email||'').toLowerCase()){
     const r=await apiServidor('/api/cuenta',{accion:'sync_email',id},true);
-    if(r.error) toast('Perfil guardado. El correo de recuperación se activará cuando el servidor esté configurado ('+r.error.message+')','info');
+    if(r.error){
+      const yaUsado=/already|registered|exists|registrad/i.test(r.error.message||'');
+      toast(yaUsado?'Ese correo ya lo usa otra cuenta: el ingreso sigue con el correo anterior o la cédula.':'Perfil guardado. El correo de ingreso se activará cuando el servidor esté configurado ('+r.error.message+')',yaUsado?'error':'info');
+    }else if(id===APP.user?.id){
+      if(_sess?.user){_sess.user=Object.assign({},_sess.user,{email:correo});_lsSave(_sess);}
+      toast('Correo actualizado: ya puedes ingresar con '+correo+' o con tu cédula.','success');
+    }
   }
   if(id===APP.user?.id){
     APP.perfil=Object.assign(APP.perfil||{},res.data);
@@ -9410,6 +9427,7 @@ async function comRender(){
   const tabs=document.getElementById('com-tabs');if(tabs)tabs.style.display=admin?'':'none';
   const bn=document.getElementById('com-btn-nuevo');if(bn)bn.style.display=admin?'':'none';
   if(!admin) COM.tab='mios';
+  document.querySelectorAll('#com-tabs .tri-tab').forEach(b=>b.classList.toggle('on',b.dataset.t===COM.tab));
   const c=document.getElementById('com-cuerpo');if(c)c.innerHTML='<div class="empty" style="padding:20px;color:#4e6c8a;">Cargando…</div>';
   await comCargarMios();
   if(admin&&COM.tab!=='mios') await comCargarTodos();
@@ -9460,6 +9478,7 @@ function comAbrirFirmar(destId){
     fz.innerHTML=`<div class="panel-box" style="background:#f2fbf6;border-color:#9fd8b8;color:#0a5a37;margin:0;">✔ Firmado el <b>${escH(comFmtTs(d.firmado_at))}</b><div id="cf-firma-img" style="margin-top:8px;"></div></div>`;
     comUrl(d.firma_path).then(u=>{const el=document.getElementById('cf-firma-img');if(el&&u)el.innerHTML=`<img src="${u}" alt="Firma" style="max-width:260px;max-height:110px;background:#fff;border:1px solid #c8d4e0;border-radius:4px;">`;});
   }else{fz.style.display='none';fz.innerHTML='';}
+  if(!firmado&&requiere) comPintarDatos();
   openModal('modal-com-firmar');
   if(!firmado&&requiere) setTimeout(comPrepararPad,60);
   // Vista previa del PDF en pantallas grandes (en celular se usa el boton)
@@ -9467,6 +9486,63 @@ function comAbrirFirmar(destId){
     comUrl(c.archivo_path).then(u=>{const el=document.getElementById('cf-pdf-embed');if(el&&u)el.innerHTML=`<iframe src="${u}" style="width:100%;height:420px;border:1px solid #c8d4e0;border-radius:4px;margin-top:8px;"></iframe>`;});
   }
   if(!d.visto_at) dbWrite('POST','rpc/marcar_comunicado_visto',{p_comunicado:c.id}).then(()=>{d.visto_at=new Date().toISOString();});
+}
+
+// v2.38.2 — Antes de firmar se exige cédula/documento y registro médico
+function comPintarDatos(){
+  const p=APP.perfil||{};
+  const box=document.getElementById('cf-datos');if(!box)return;
+  const lbl='font-family:var(--mono);font-size:9px;color:#4e6c8a;text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:3px;';
+  const inp='width:100%;padding:8px 9px;border:1px solid #c8d4e0;border-radius:4px;font-size:14px;color:#0d1f35;background:#fff;';
+  const faltan=!String(p.cedula||'').trim()||!String(p.registro_med||'').trim();
+  box.innerHTML=`<div style="font-size:13px;font-weight:600;color:#0d1f35;margin-bottom:${faltan?'4':'8'}px;">Verifique sus datos</div>
+    ${faltan?'<div style="font-size:12px;color:#b45309;margin-bottom:8px;">Para firmar debe completar los datos que faltan en AgendaANS.</div>':''}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="grid-column:1/-1;"><span style="${lbl}">Nombre</span><div style="font-size:14px;color:#0d1f35;">${escH(comNombre(p))}</div></div>
+      <div><span style="${lbl}">Cédula o documento de identificación *</span>${String(p.cedula||'').trim()
+        ?`<div style="font-size:14px;color:#0d1f35;padding:8px 0;">${escH(p.cedula)}</div><div style="font-size:10px;color:#4e6c8a;">¿Es incorrecta? Corríjala en Mi perfil.</div>`
+        :`<input id="cf-cc" type="text" inputmode="numeric" autocomplete="off" placeholder="Número de documento" style="${inp}border-color:#f5a524;">`}</div>
+      <div><span style="${lbl}">Registro médico *</span><input id="cf-rm" type="text" autocomplete="off" value="${escH(p.registro_med||'')}" placeholder="Número de registro médico" style="${inp}${String(p.registro_med||'').trim()?'':'border-color:#f5a524;'}"></div>
+      <div><span style="${lbl}">Teléfono celular</span><input id="cf-tel" type="tel" autocomplete="off" value="${escH(p.telefono||'')}" placeholder="Ej.: 3001234567" style="${inp}"></div>
+      <div><span style="${lbl}">Correo electrónico</span><input id="cf-mail" type="email" autocomplete="off" value="${escH(esCorreoReal(p.email)?p.email:'')}" placeholder="correo@ejemplo.com" style="${inp}"></div>
+    </div>
+    <div style="font-size:10px;color:#4e6c8a;margin-top:6px;">Si cambia algún dato, se actualiza en su perfil al firmar. El correo sirve para ingresar y para recuperar la contraseña.</div>`;
+}
+async function comGuardarDatos(){
+  const p=APP.perfil||{};
+  const data={};
+  const cc=document.getElementById('cf-cc');
+  if(cc){
+    const v=cc.value.replace(/[\s.]/g,'').trim();
+    if(!/^[0-9A-Za-z-]{5,15}$/.test(v)) throw new Error('Escriba su cédula o documento de identificación (solo números o letras, sin puntos).');
+    const dup=APP.perfiles.find(x=>x.id!==p.id&&String(x.cedula||'').replace(/[\s.]/g,'')===v);
+    if(dup) throw new Error('Ese documento ya está registrado en otro usuario. Comuníquese con el coordinador.');
+    data.cedula=v;
+  }
+  const rmEl=document.getElementById('cf-rm');
+  const rm=(rmEl?.value||'').trim();
+  if(rm.length<3) throw new Error('Escriba su número de registro médico.');
+  if(rm!==String(p.registro_med||'').trim()) data.registro_med=rm;
+  const tel=(document.getElementById('cf-tel')?.value||'').trim();
+  if(tel&&!/^[0-9+()\s-]{7,20}$/.test(tel)) throw new Error('Revise el teléfono: solo números.');
+  if(tel!==String(p.telefono||'').trim()) data.telefono=tel;
+  const mail=(document.getElementById('cf-mail')?.value||'').trim();
+  if(mail&&!esCorreoReal(mail)) throw new Error('Revise el correo electrónico.');
+  const cambiaCorreo=!!mail&&mail.toLowerCase()!==String(p.email||'').toLowerCase();
+  if(cambiaCorreo) data.email=mail;
+  if(!Object.keys(data).length) return;
+  const res=await dbWrite('PATCH','perfiles?id=eq.'+p.id,data);
+  if(res.error) throw new Error('No se guardaron sus datos: '+res.error.message);
+  if(!res.data) throw new Error('No se guardaron sus datos (permisos). Comuníquese con el coordinador.');
+  Object.assign(APP.perfil,data);
+  const enLista=APP.perfiles.find(x=>x.id===p.id);if(enLista)Object.assign(enLista,data);
+  if(cambiaCorreo){
+    // El correo nuevo pasa tambien a la cuenta de ingreso (sin bloquear la firma si falla)
+    apiServidor('/api/cuenta',{accion:'sync_email',id:p.id},true).then(r=>{
+      if(r?.error) toast('Su correo quedó en el perfil, pero no se pudo activar para ingresar: '+r.error.message,'info');
+      else if(_sess?.user){_sess.user=Object.assign({},_sess.user,{email:mail});_lsSave(_sess);}
+    }).catch(()=>{});
+  }
 }
 function comPrepararPad(){
   const cv=document.getElementById('cf-pad');if(!cv)return;
@@ -9499,6 +9575,7 @@ async function comFirmar(){
   if(!document.getElementById('cf-acepto').checked){err.textContent='Marque la casilla de confirmación.';return;}
   const btn=document.getElementById('cf-btn');btn.disabled=true;btn.textContent='Firmando…';
   try{
+    try{ await comGuardarDatos(); }catch(e){ e.datos=true; throw e; }
     const cv=document.getElementById('cf-pad');
     const out=document.createElement('canvas');out.width=cv.width;out.height=cv.height;
     const o=out.getContext('2d');o.fillStyle='#fff';o.fillRect(0,0,out.width,out.height);o.drawImage(cv,0,0);
@@ -9513,7 +9590,7 @@ async function comFirmar(){
     await comCargarMios();
     if(COM.tab==='mios') comPintar();
   }catch(e){
-    err.textContent='No se pudo registrar la firma: '+e.message;
+    err.textContent=e.datos?e.message:'No se pudo registrar la firma: '+e.message;
   }finally{btn.disabled=false;btn.textContent='Firmar y confirmar lectura';}
 }
 
@@ -9540,7 +9617,7 @@ function comDetalle(id){
   h+=`<table class="com-tbl"><thead><tr><th>Anestesiólogo</th><th>Visto</th><th>Firmado</th><th></th></tr></thead><tbody>`;
   h+=ds.map(x=>{
     const p=comPerfil(x.perfil_id);
-    return `<tr><td>${escH(comNombre(p))}<div style="font-family:var(--mono);font-size:9px;color:#4e6c8a;">${escH(p?.cedula||'')}</div></td>
+    return `<tr><td>${escH(comNombre(p))}<div style="font-family:var(--mono);font-size:9px;color:#4e6c8a;">C.C. ${escH(p?.cedula||'—')} · RM ${escH(p?.registro_med||'—')}</div></td>
       <td style="font-size:11px;">${x.visto_at?escH(comFmtTs(x.visto_at)):'—'}</td>
       <td style="font-size:11px;">${x.firmado_at?'<span class="com-tag ok">'+escH(comFmtTs(x.firmado_at))+'</span>':'<span class="com-tag pend">Pendiente</span>'}</td>
       <td style="white-space:nowrap;">${x.firmado_at?`<button class="btn sm" onclick="comActa('${c.id}','${x.perfil_id}')">Acta</button>`:''}</td></tr>`;
@@ -9672,6 +9749,10 @@ function comFiltrarExp(){
     el.style.display=!q||n.includes(q)?'':'none';
   });
 }
+function comIrExpediente(pid){
+  COM.expPerfil=pid;COM.tab='expedientes';
+  navTo('comunicados');
+}
 async function comExpediente(pid){
   COM.expPerfil=pid;
   document.querySelectorAll('.com-exp-p').forEach(el=>{
@@ -9689,9 +9770,10 @@ async function comExpediente(pid){
   const nPend=filas.filter(f=>f.comunicados.requiere_firma&&!f.firmado_at&&!f.comunicados.anulado).length;
   let h=`<div class="panel-box"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
     <div><div style="font-size:16px;font-weight:600;color:#0d1f35;">📁 ${escH(comNombre(p))}</div>
-    <div style="font-family:var(--mono);font-size:10px;color:#4e6c8a;margin-top:3px;">C.C. ${escH(p?.cedula||'—')} · ${escH(comGrupoDe(p||{}))}</div>
+    <div style="font-family:var(--mono);font-size:10px;color:#4e6c8a;margin-top:3px;">C.C. ${escH(p?.cedula||'—')} · RM ${escH(p?.registro_med||'—')} · ${escH(comGrupoDe(p||{}))}</div>
+    <div style="font-family:var(--mono);font-size:10px;color:#4e6c8a;margin-top:2px;">${escH(p?.telefono||'Sin teléfono')} · ${escH(esCorreoReal(p?.email)?p.email:'Sin correo')}</div>
     <div style="font-size:12px;margin-top:6px;color:#0d1f35;">${filas.length} documento(s) · <b style="color:#b42318;">${nLla}</b> llamado(s) de atención · <b style="color:#b45309;">${nPend}</b> pendiente(s)</div></div>
-    ${filas.length?`<button class="btn sm" onclick="comImprimirExpediente()">Imprimir expediente</button>`:''}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn sm" onclick="abrirPerfil('${pid}')">👤 Datos personales</button>${filas.length?`<button class="btn sm" onclick="comImprimirExpediente()">Imprimir expediente</button>`:''}</div>
   </div></div>`;
   if(!filas.length) h+='<div class="panel-box" style="color:#4e6c8a;">Sin documentos en su carpeta.</div>';
   else{
@@ -9716,7 +9798,8 @@ function comActaHtml(c,f,p,firmaUrl){
       <tr><th>Consecutivo</th><td>${escH(comNum(c)||'—')}</td></tr>
       <tr><th>Fecha del documento</th><td>${escH(comFmtF(c.fecha))}</td></tr>
       <tr><th>Anestesiólogo</th><td>${escH(f.firma_nombre||comNombre(p))}</td></tr>
-      <tr><th>Cédula</th><td>${escH(f.firma_cedula||p?.cedula||'')}</td></tr>
+      <tr><th>Cédula / documento</th><td>${escH(f.firma_cedula||p?.cedula||'')}</td></tr>
+      <tr><th>Registro médico</th><td>${escH(p?.registro_med||'—')}</td></tr>
       <tr><th>Primera lectura</th><td>${escH(comFmtTs(f.visto_at)||'—')}</td></tr>
       <tr><th>Fecha y hora de firma</th><td>${escH(comFmtTs(f.firmado_at))} (hora Colombia, registrada por el servidor)</td></tr>
     </table>
