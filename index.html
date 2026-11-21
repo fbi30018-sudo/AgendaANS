@@ -1200,6 +1200,7 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
           <button class="tri-tab" onclick="selTri(6,this)">Q3 Jul—Sep 2027</button>
           <button class="tri-tab" onclick="selTri(7,this)">Q4 Oct—Dic 2027</button>
         </div>
+        <div id="disp-perfil-sel" style="display:none;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;"></div>
         <div class="alert info" id="disp-alert">Selecciona un dia para registrar tu disponibilidad.</div>
         <div id="disp-grid"></div>
         <div class="panel-box" style="padding:10px 14px;margin-top:8px;">
@@ -2497,6 +2498,7 @@ class Q{
   }
   select(s='*'){this._s=s;return this;}
   eq(c,v){this._f.push(c+'=eq.'+encodeURIComponent(v));return this;}
+  inList(c,arr){this._f.push(c+'=in.('+arr.map(v=>encodeURIComponent(v)).join(',')+')');return this;}
   neq(c,v){this._f.push(c+'=neq.'+encodeURIComponent(v));return this;}
   gte(c,v){this._f.push(c+'=gte.'+encodeURIComponent(v));return this;}
   lte(c,v){this._f.push(c+'=lte.'+encodeURIComponent(v));return this;}
@@ -2563,6 +2565,11 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.39.0',n:'Perfiles vinculados SEDAR + IME',f:'2026-11-21',cambios:[
+    'Corregido: un anestesiologo con dos perfiles (SEDAR e IME) no veia en "Mi Disponibilidad" lo que el administrador registraba en su perfil IME, y viceversa, porque cada perfil guarda su disponibilidad por separado.',
+    'Nuevo: si un perfil tiene vinculado_a = usuario que inicia sesion, en "Mi Disponibilidad" aparece un selector SEDAR / IME para ver, registrar y facturar cada perfil. Por defecto abre el perfil principal (SEDAR).',
+    'Requiere ejecutar una vez supabase/migracion_v2.39.0_perfiles_vinculados.sql y vincular el perfil IME al perfil SEDAR.'
+  ]},
   {v:'2.38.2',n:'Datos obligatorios al firmar comunicados',f:'2026-11-18',cambios:[
     'Nuevo: antes de firmar un comunicado o llamado de atención, cada anestesiólogo ve sus datos. Si no tiene registrada la cédula (o documento de identificación) o el registro médico en AgendaANS, debe escribirlos para poder firmar; quedan guardados en su perfil.',
     'El registro médico se puede actualizar en ese mismo momento. La cédula ya registrada no se cambia desde ahí (se usa para ingresar a la app); si está errada se corrige en Mi perfil.',
@@ -2936,6 +2943,26 @@ function puedeEscribirMiDisp(iso){
   return true;
 }
 function dKey(uid,iso){return uid+'_'+iso;}
+// ── Perfiles vinculados (misma persona con perfil SEDAR + perfil IME) ──
+// Un perfil (p. ej. slot IME) con perfiles.vinculado_a = id del usuario que
+// inicia sesion se muestra en "Mi Disponibilidad" con un selector, para que
+// el anestesiologo vea y registre en ambos perfiles.
+let _dispComo=null;
+function perfilesVinculados(){const me=APP.user?.id;if(!me)return [];return (APP.perfiles||[]).filter(p=>p.vinculado_a===me&&p.id!==me);}
+function dispUid(){const me=APP.user?.id;if(_dispComo&&_dispComo!==me&&perfilesVinculados().some(p=>p.id===_dispComo))return _dispComo;return me;}
+function idsMiDisp(){return [APP.user.id,...perfilesVinculados().map(p=>p.id)];}
+function etiquetaPerfilDisp(p){if(!p)return '';const emp=p.empresa||'';return emp?emp:(p.rol||'perfil');}
+function renderDispSelectorPerfil(){
+  const box=document.getElementById('disp-perfil-sel');if(!box)return;
+  const vinc=perfilesVinculados();
+  if(!vinc.length){box.innerHTML='';box.style.display='none';return;}
+  const actual=dispUid();
+  const lista=[APP.perfil||getP(APP.user.id)||{id:APP.user.id,empresa:'Principal'},...vinc];
+  box.style.display='flex';
+  box.innerHTML='<span style="font-family:var(--mono);font-size:10px;color:#4a5a6a;text-transform:uppercase;letter-spacing:.6px;">Perfil:</span>'+
+    lista.map(p=>`<button class="tri-tab${p.id===actual?' on':''}" onclick="cambiarPerfilDisp('${p.id}')">${etiquetaPerfilDisp(p)}</button>`).join('');
+}
+function cambiarPerfilDisp(id){_dispComo=(id===APP.user?.id)?null:id;renderDispSelectorPerfil();renderDispTri();}
 function getDisp(uid,iso){return APP.disp[dKey(uid,iso)]||null;}
 function triActivo(t){
   if(!t) return false;
@@ -3213,7 +3240,7 @@ async function cargarDispMes(y,m){
   const hasta=`${y}-${String(m+1).padStart(2,'0')}-${new Date(y,m+1,0).getDate()}`;
   // Admin carga disponibilidades de TODOS para ver cuadro y distribucion
   let q=db.from('disponibilidad').select('*').gte('fecha',desde).lte('fecha',hasta);
-  if(!APP.isAdmin) q=q.eq('user_id',APP.user.id);
+  if(!APP.isAdmin){const ids=idsMiDisp();q=ids.length>1?q.inList('user_id',ids):q.eq('user_id',APP.user.id);}
   const {data}=await q;
   const rows=data||[];
   rows.forEach(r=>{
@@ -4615,7 +4642,7 @@ function medRenderPareja(uid,iso){
 }
 function dpCuentaHoras(dp){return !!(dp&&((dp.turnos&&dp.turnos.length&&!dp.turnos.includes('no'))||dpTieneExtras(dp)));}
 function renderDispMesGrid(y,m,editable){
-  const uid=APP.user.id,hoy=toISO(new Date());
+  const uid=dispUid(),hoy=toISO(new Date());
   const primer=new Date(y,m,1),off=(primer.getDay()+6)%7,nDias=new Date(y,m+1,0).getDate();
   const {totalHoras:mH,totalPesos:mP,desglose:mD}=calcFacturacion(uid,[m],y);
   const fmtM=n=>new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',minimumFractionDigits:0}).format(n);
@@ -5508,6 +5535,7 @@ function selTri(idx,btn){
 
 function renderDispTri(){
   const t=TRIMESTRES[dispTri];if(!t)return;
+  renderDispSelectorPerfil();
   const grid=document.getElementById('disp-grid');if(!grid)return;
   const editable=triActivo(t);
   let html='';
@@ -5520,7 +5548,7 @@ function renderDispTri(){
   html+=`<div id="fact-tri" style="margin-top:4px;"></div>`;
   grid.innerHTML=html;
   // Render facturacion despues de insertar el HTML
-  renderFacturacion(APP.user.id, t.meses, 'fact-tri', t.anio||2026);
+  renderFacturacion(dispUid(), t.meses, 'fact-tri', t.anio||2026);
 }
 
 // ── EXPORTAR PDF INDIVIDUAL DE ANESTESIOLOGO ─────────────────
@@ -5764,7 +5792,7 @@ function abrirDisp(iso){
   dispDia=iso;
   const tit=document.getElementById('md-titulo');if(tit)tit.textContent='Disponibilidad — '+dt.getDate()+' de '+MESES[dt.getMonth()];
   const sub=document.getElementById('md-sub');if(sub)sub.textContent=fmtF(dt);
-  const dp=getDisp(APP.user.id,iso)||{turnos:[],observaciones:'',extras:[]};
+  const dp=getDisp(dispUid(),iso)||{turnos:[],observaciones:'',extras:[]};
   dispT=new Set(dp.turnos||[]);
   _dispExtras=[...(dp.extras||[])];
   const obs=document.getElementById('md-obs');if(obs)obs.value=dp.observaciones||'';
@@ -5803,7 +5831,7 @@ async function dispBorrarDia(){
   const dt=new Date(dispDia+'T12:00:00');
   const lbl=dt.getDate()+' de '+MESES_FULL[dt.getMonth()];
   if(!confirm(`¿Borrar completamente tu registro del ${lbl}?\n\nEl día quedará en blanco y podrás volver a registrar disponibilidad.`)) return;
-  const uid=APP.user.id;
+  const uid=dispUid();
   const key=dKey(uid,dispDia);
   const ex=APP.disp[key];
   if(ex?.id){
@@ -5856,7 +5884,7 @@ async function guardarDisp(){
   }
 
   if(!puedeEscribirMiDisp(dispDia)){if(btn){btn.disabled=false;btn.textContent='Guardar';}return;}
-  const uid=APP.user.id;
+  const uid=dispUid();
   const iso=dispDia;
   const key=dKey(uid,iso);
   const ex=APP.disp[key];
