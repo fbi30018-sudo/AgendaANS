@@ -364,6 +364,33 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
 .sala-card.urg .sala-name{color:#c8d8ff;}
 .sala-card.sed .sala-hdr{background:#e8f4fd;border-bottom:1px solid #a8d0e8;}
 .sala-card.empty .sala-hdr{background:#f0f4f9;border-bottom:1px solid #c8d4e0;}
+/* v2.40.0 — Arrastrar y soltar anestesiologos */
+.dd-pool{position:sticky;top:0;z-index:6;background:#fff;border:1px solid #c8d4e0;border-radius:5px;padding:9px 10px;margin-bottom:12px;box-shadow:0 2px 8px rgba(13,31,53,.06);}
+.dd-pool.dd-over{border-color:#c0392b;background:#fff7f7;}
+.dd-pool-hdr{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-family:var(--mono);font-size:9px;color:#4e6c8a;text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px;}
+.dd-pool-hdr b{color:#0d1f35;}
+.dd-pool-hint{font-family:var(--mono);font-size:9px;color:#8aa8c0;text-transform:none;letter-spacing:0;margin-left:auto;}
+.dd-chips{display:flex;flex-wrap:wrap;gap:5px;max-height:150px;overflow-y:auto;}
+.dd-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px 4px 4px;border-radius:14px;border:1px solid #c8d4e0;background:#f6f9fc;font-size:11px;color:#0d1f35;cursor:grab;user-select:none;-webkit-user-select:none;transition:transform .1s,box-shadow .1s;}
+.dd-chip:hover{box-shadow:0 2px 8px rgba(26,92,191,.18);}
+.dd-chip:active{cursor:grabbing;}
+.dd-chip .doc-av{width:20px;height:20px;font-size:7px;flex-shrink:0;}
+.dd-chip .dd-of{font-family:var(--mono);font-size:9px;color:#4e6c8a;}
+.dd-chip .dd-st{font-family:var(--mono);font-size:8px;padding:1px 5px;border-radius:8px;}
+.dd-chip.st-sin{border-color:#e0a8a8;background:#fff5f5;}
+.dd-chip.st-sin .dd-st{background:#c0392b;color:#fff;}
+.dd-chip.st-parcial{border-color:#f0c36a;background:#fffaf0;}
+.dd-chip.st-parcial .dd-st{background:#d97706;color:#fff;}
+.dd-chip.st-ok{opacity:.62;}
+.dd-chip.st-ok .dd-st{background:#0a7a4a;color:#fff;}
+.dd-chip.armado{outline:2px solid #1a5cbf;outline-offset:1px;opacity:1;}
+.dd-chip.dragging{opacity:.4;}
+.sala-card.dd-over{outline:2px dashed #1a5cbf;outline-offset:2px;box-shadow:0 4px 16px rgba(26,92,191,.25);}
+.sala-card.dd-target{cursor:copy;outline:1px dashed #8aa8c0;outline-offset:2px;}
+.sala-row[draggable="true"]{cursor:grab;}
+#ms-asignados.dd-over{outline:2px dashed #1a5cbf;outline-offset:2px;border-radius:4px;background:#f3f8ff;}
+#btn-save-dist.dd-dirty{box-shadow:0 0 0 3px rgba(217,119,6,.55);}
+
 .sala-name{font-size:11px;font-weight:600;color:#0d1f35;}
 .sala-body{padding:10px 12px;min-height:52px;background:#fff;}
 .sala-doc{display:flex;align-items:center;gap:8px;}
@@ -1268,6 +1295,7 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
           <div class="panel-hdr">
             <div><h3>Asignacion</h3><div style="font-family:var(--mono);font-size:9px;color:#4e6c8a;margin-top:2px;" id="dist-disp-lbl">—</div></div>
           </div>
+          <div class="dd-pool" id="dist-pool" style="display:none;"></div>
           <div class="salas-grid" id="salas-grid"></div>
         </div>
         <div class="panel-box"><h3 style="margin-bottom:10px;">Resumen</h3><div id="dist-resumen"></div></div>
@@ -2112,6 +2140,20 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
   </div>
 </div>
 
+<!-- MODAL AVISO DISPONIBLES SIN ASIGNAR (v2.40.0) -->
+<div class="overlay" id="modal-dd-aviso">
+  <div class="modal" style="width:min(94vw,520px);max-height:85vh;overflow-y:auto;">
+    <div class="modal-hdr"><h3>Disponibilidades sin asignar</h3><button class="modal-x" onclick="closeModal('modal-dd-aviso')">✕</button></div>
+    <div class="alert warn" style="margin:0 0 10px;font-size:11px;">La distribución quedó guardada. Estos anestesiólogos entregaron disponibilidad para este día y no tienen asignación (o tienen horas ofertadas sin cubrir):</div>
+    <div id="dd-aviso-lista" style="display:flex;flex-direction:column;gap:5px;font-size:12px;"></div>
+    <div class="modal-actions">
+      <div style="flex:1"></div>
+      <button class="btn" onclick="closeModal('modal-dd-aviso')">Entendido</button>
+      <button class="btn prim" onclick="closeModal('modal-dd-aviso');document.getElementById('dist-pool')?.scrollIntoView({behavior:'smooth',block:'center'});">Ir a asignar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL SALA -->
 <div class="overlay" id="modal-sala">
   <div class="modal" style="width:min(94vw,580px);">
@@ -2119,10 +2161,15 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
     <!-- Lista de anestesiologos asignados -->
     <div style="font-family:var(--mono);font-size:9px;color:#1a5cbf;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Anestesiologos asignados</div>
     <div id="ms-asignados" style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;min-height:32px;"></div>
+    <!-- v2.40.0 — disponibles pendientes: arrastrar hasta "asignados" o clic -->
+    <div id="ms-pool-wrap" style="padding-top:10px;border-top:1px solid #c8d4e0;margin-bottom:8px;">
+      <div style="font-family:var(--mono);font-size:9px;color:#1a5cbf;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Disponibles por asignar <span style="text-transform:none;color:#8aa8c0;letter-spacing:0;">— arrastra el nombre a la lista de arriba o haz clic</span></div>
+      <div id="ms-pool" class="dd-chips"></div>
+    </div>
     <!-- Agregar anestesiologo -->
     <div style="padding-top:10px;border-top:1px solid #c8d4e0;">
       <div class="field" style="margin:0 0 8px;">
-        <label>Agregar anestesiologo</label>
+        <label>O seleccionar de la lista (solo quienes entregaron disponibilidad)</label>
         <select id="ms-doc" style="width:100%;" onchange="msOnDocChange()"></select>
       </div>
       <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;">
@@ -2565,6 +2612,15 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.40.0',n:'Asignación arrastrando nombres',f:'2026-11-25',cambios:[
+    'Nuevo: en Distribución de Salas aparece arriba un panel con los anestesiólogos que entregaron disponibilidad ese día. Se arrastra el nombre hasta la sala (o clic en el nombre y luego clic en la sala). El turno se elige solo según lo ofertado y lo que falte por cubrir (por ejemplo, quien ofertó 24 h queda de día en una sala y luego de noche en el Quirófano Urgente).',
+    'Un nombre ya asignado se puede arrastrar a otra sala para moverlo, o devolverlo al panel para quitarlo. El turno se puede ajustar después con el lápiz de la sala.',
+    'Cada nombre muestra su estado: rojo = sin asignar, ámbar = asignado pero con horas ofertadas sin cubrir, verde = completo.',
+    'La ventana de la sala ahora solo lista a quienes entregaron disponibilidad (más los cupos IME rotativos) y muestra arriba los pendientes para arrastrar o hacer clic.',
+    'Alerta informativa: al guardar la distribución, si alguien con disponibilidad quedó sin asignar o con horas sin cubrir, aparece la lista. También se muestra en el Resumen y se avisa cuando hay más disponibles que puestos.',
+    'El botón Guardar queda resaltado mientras haya cambios sin guardar.',
+    'Corregido: al cambiar la configuración del día (número de salas, consultorios, urgencias…) ya no se pierden las asignaciones que aún no se habían guardado.'
+  ]},
   {v:'2.39.0',n:'Perfiles vinculados SEDAR + IME',f:'2026-11-21',cambios:[
     'Corregido: un anestesiologo con dos perfiles (SEDAR e IME) no veia en "Mi Disponibilidad" lo que el administrador registraba en su perfil IME, y viceversa, porque cada perfil guarda su disponibilidad por separado.',
     'Nuevo: si un perfil tiene vinculado_a = usuario que inicia sesion, en "Mi Disponibilidad" aparece un selector SEDAR / IME para ver, registrar y facturar cada perfil. Por defecto abre el perfil principal (SEDAR).',
@@ -6027,16 +6083,28 @@ function renderDist(){
   const dl=document.getElementById('dist-disp-lbl');
   if(dl)dl.textContent=APP.isAdmin?`${dH.length} disponibles · ${total} puestos`:`${total} puestos asignados`;
   const da=document.getElementById('dist-alert');
-  if(da){da.style.display=dH.length<total&&APP.isAdmin?'':'none';if(da.style.display!=='none')da.textContent=`Solo ${dH.length} disponibles para ${total} puestos.`;}
-  buildSalasUI();
+  if(da){
+    da.style.display=dH.length!==total&&APP.isAdmin?'':'none';
+    if(da.style.display!=='none') da.textContent=dH.length<total
+      ?`Solo ${dH.length} disponibles para ${total} puestos.`
+      :`Hay ${dH.length} anestesiólogos con disponibilidad para ${total} puestos — ${dH.length-total} quedarían sin asignar. Revisa el panel de disponibles o agrega consultorios/salas.`;
+  }
+  ddMarcarCambios(false);
+  buildSalasUI(true);
 }
-function buildSalasUI(){
+// desdeGuardado=true al cambiar de fecha; al cambiar la configuracion del dia
+// (salas, consultorios, urgencias...) se conservan las asignaciones sin guardar.
+let _salasCurFecha=null;
+function buildSalasUI(desdeGuardado){
   const nS=parseInt(document.getElementById('cfg-salas')?.value||6);
   const nC=parseInt(document.getElementById('cfg-cons')?.value||2);
   const nI=parseInt(document.getElementById('cfg-inter')?.value||1);
   const nO=parseInt(document.getElementById('cfg-onco')?.value||0);
   const nSed=parseInt(document.getElementById('cfg-sed')?.value||0);
-  const prev=(APP.dist[distDate]||{}).salas||[];
+  const usarActual=!desdeGuardado&&_salasCurFecha===distDate&&salasCur.length;
+  const prev=usarActual?salasCur:((APP.dist[distDate]||{}).salas||[]);
+  if(usarActual) ddMarcarCambios();
+  _salasCurFecha=distDate;
   salasCur=[];
   for(let i=1;i<=nS;i++)salasCur.push({id:`sala_${i}`,tipo:'sala',num:i,users:[],obs:''});
   for(let i=1;i<=nC;i++)salasCur.push({id:`cons_${i}`,tipo:'consultorio',num:i,users:[],obs:''});
@@ -6136,12 +6204,13 @@ function renderSalas(){
     let bodyHtml='';
     if(entries.length){
       bodyHtml=entries.map(({u,doc})=>{
+        const uI=users.indexOf(u);
         const esIme=isIME(doc);
         const completo=esIme?nombreIME(doc,u,'IME — pendiente'):(doc.nombre+' '+doc.apellidos);
         const corto=salaNombreCorto(doc,u);
         const esYo=u.uid===miId;
         const tip=`${completo} · ${turnoLabel(u.turno||'dia')} · ${empresaStr(doc)}${esIme&&u.cedula?' · CC '+u.cedula:''}${esYo?' (tu)':''}`;
-        return `<div class="sala-row${esYo?' yo':''}" title="${escHtml(tip)}">
+        return `<div class="sala-row${esYo?' yo':''}" title="${escHtml(tip)}${APP.canEdit?' — arrastra para mover a otra sala o al panel de disponibles para quitar':''}"${APP.canEdit?` draggable="true" data-uid="${u.uid}" data-from="${idx}" data-i="${uI}"`:''}>
           <div class="doc-av ${avCls(doc)}" style="${esIme?'background:#f59e0b;color:#fff;':''}">${inics(doc)}</div>
           <div class="sala-row-nom">${escHtml(corto)}</div>
           <span class="sala-emp${esIme?' ime':''}">${empresaStr(doc)}</span>
@@ -6168,8 +6237,10 @@ function renderSalas(){
         ${btnEditar}
       </div>
       <div class="sala-body">${bodyHtml}</div>`;
+    if(APP.canEdit) ddHabilitarCard(card,idx);
     grid.appendChild(card);
   });
+  renderPoolDisp();
   // Resumen completo para todos (admin y anestesiologo)
   // El anestesiologo ve el mismo resumen pero con su sala destacada arriba
   const canceladas=salasCur.filter(s=>s.cancelada);
@@ -6191,6 +6262,10 @@ function renderSalas(){
       }
     }
     resHtml+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;"><span class="badge col">Con asignacion: ${conDoc}</span><span class="badge pend">Sin asignar: ${sinDoc}</span>${canceladas.length?`<span class="badge" style="background:#fbeaea;color:#8b1a1a;">Canceladas: ${canceladas.length}</span>`:''}<span class="badge sedar">Total salas: ${salasCur.length}</span></div>`;
+    if(APP.canEdit){
+      const pend=ddPendientes();
+      if(pend.length) resHtml+=`<div class="alert" style="margin:0 0 8px;background:#fff5f5;color:#8b1a1a;border-color:#e0a8a8;font-size:11px;">⚠️ <strong>${pend.length} con disponibilidad sin asignación completa:</strong> ${pend.map(x=>escHtml(x.txt)).join(' · ')}</div>`;
+    }
     resHtml+=sinDoc===0?'<div class="alert succ" style="margin:0;">Todos los puestos activos cubiertos.</div>':'<div class="alert warn" style="margin:0;">Sin cubrir: '+salasCur.filter(s=>!s.cancelada&&(!s.users||!s.users.length)).map(s=>salaLabel(s)).join(', ')+'</div>';
     const parciales=salasCur.filter(s=>!s.cancelada&&s.canc_parcial);
     if(parciales.length){
@@ -6289,8 +6364,10 @@ function editSala(idx){
   sel.innerHTML='<option value="">— Seleccionar —</option>';
   const docs=getDocs();
   const imes=docs.filter(d=>isIME(d));
-  const hosps=docs.filter(d=>!isIME(d)&&esHosp(d));
-  const resto=docs.filter(d=>!isIME(d)&&!esHosp(d));
+  // v2.40.0 — solo quienes entregaron disponibilidad este dia (los slots IME
+  // rotativos se mantienen porque no registran disponibilidad propia)
+  const hosps=docs.filter(d=>!isIME(d)&&esHosp(d)&&dispOfertados(d.id,distDate).length);
+  const resto=docs.filter(d=>!isIME(d)&&!esHosp(d)&&dispOfertados(d.id,distDate).length);
   function msAddHeader(txt){
     const h=document.createElement('option');h.disabled=true;h.textContent='── '+txt+' ──';
     sel.appendChild(h);
@@ -6313,7 +6390,8 @@ function editSala(idx){
       const ok=dp&&dp.turnos&&!dp.turnos.includes('no')&&dp.turnos.length;
       const turno=ok?dp.turnos.map(t=>({dia:'D',noche:'N',guardia:'24h',h6m:'6hM',h6t:'6hT'}[t]||t)).join('/'):'';
       const opt=document.createElement('option');opt.value=d.id;
-      opt.textContent=`${d.nombre} ${d.apellidos} [${empresaStr(d)}] ${ok?'✓ '+turno:'○'}`;
+      const stA=estadoAsignacion(d.id,{buffer:{idx,users:_msUsers}}).estado;
+      opt.textContent=`${d.nombre} ${d.apellidos} [${empresaStr(d)}] ${ok?'✓ '+turno:'○'}${stA==='sin'?' · sin asignar':stA==='parcial'?' · parcial':''}`;
       sel.appendChild(opt);
     });
   }
@@ -6336,6 +6414,7 @@ function editSala(idx){
   // forzado (aqui es donde se asignan los anestesiologos a cada sala/consultorio).
   customizarSelect('ms-doc');
   customizarSelect('ms-turno');
+  msRenderPool();
   openModal('modal-sala');
 }
 function msRenderAsignados(){
@@ -6366,7 +6445,7 @@ function msRenderAsignados(){
     }
   });
 }
-function msQuitar(i){_msUsers.splice(i,1);msRenderAsignados();}
+function msQuitar(i){_msUsers.splice(i,1);msRenderAsignados();msRenderPool();}
 function msEditarIME(i){
   const u=_msUsers[i];
   const nombre=prompt('Nombre del anestesiólogo IME:',u.imeNombre||'');
@@ -6406,6 +6485,7 @@ function msAgregarDoc(){
   }
   _msUsers.push(entry);
   msRenderAsignados();
+  msRenderPool();
   document.getElementById('ms-doc').value='';
   const row=document.getElementById('ms-ime-row');if(row)row.style.display='none';
   const inp=document.getElementById('ms-ime-nombre');if(inp)inp.value='';
@@ -6414,29 +6494,281 @@ function asignarSala(){
   const idx=parseInt(document.getElementById('ms-idx').value);
   salasCur[idx].users=[..._msUsers];
   salasCur[idx].obs=document.getElementById('ms-obs').value;
-  // Compat legacy
-  // El titular legacy es el primer anestesiologo (no el hospitalario de apoyo)
-  const tit=_msUsers.find(x=>!esHosp(getP(x.uid)))||_msUsers[0];
-  salasCur[idx].user_id=tit?tit.uid:null;
-  salasCur[idx].turno=tit?tit.turno:'dia';
-  // Sabado/domingo/festivo: si el consultorio tiene un solo anestesiologo y el
-  // hospitalario no tiene pareja registrada ese dia, se empareja con el automaticamente
-  const sl=salasCur[idx];
+  salaSyncLegacy(idx);
+  salaAutoPareja(idx);
+  ddMarcarCambios();
+  closeModal('modal-sala');renderSalas();
+}
+// Compat legacy: el titular es el primer anestesiologo (no el hospitalario de apoyo)
+function salaSyncLegacy(idx){
+  const sl=salasCur[idx];if(!sl)return;
+  const us=sl.users||[];
+  const tit=us.find(x=>!esHosp(getP(x.uid)))||us[0];
+  sl.user_id=tit?tit.uid:null;
+  sl.turno=tit?tit.turno:'dia';
+}
+// Sabado/domingo/festivo: si el consultorio tiene un solo anestesiologo y el
+// hospitalario no tiene pareja registrada ese dia, se empareja con el automaticamente
+function salaAutoPareja(idx){
+  const sl=salasCur[idx];if(!sl)return;
   if((sl.tipo==='consultorio'||sl.tipo==='interconsulta')&&distDate>=HOSP_DESDE&&!esDiaHabil(distDate)){
-    const anes=sl.users.filter(x=>{const d=getP(x.uid);return d&&!esHosp(d)&&!isIME(d);});
-    sl.users.filter(x=>esHosp(getP(x.uid))&&hospParejaReg(x.uid,distDate)===undefined).forEach(x=>{
+    const anes=(sl.users||[]).filter(x=>{const d=getP(x.uid);return d&&!esHosp(d)&&!isIME(d);});
+    (sl.users||[]).filter(x=>esHosp(getP(x.uid))&&hospParejaReg(x.uid,distDate)===undefined).forEach(x=>{
       if(anes.length===1) cambiarPareja(distDate,x.uid,anes[0].uid);
       else toast(nomDoc(x.uid)+': elige con qué anestesiólogo queda emparejado','info');
     });
   }
-  closeModal('modal-sala');renderSalas();
 }
 function limpiarSala(){
   const idx=parseInt(document.getElementById('ms-idx').value);
   _msUsers=[];
   salasCur[idx].users=[];salasCur[idx].user_id=null;salasCur[idx].obs='';
+  ddMarcarCambios();
   msRenderAsignados();
   closeModal('modal-sala');renderSalas();
+}
+// ══════════════════════════════════════════════════════════════
+//  v2.40.0 — ARRASTRAR Y SOLTAR + CONTROL DE DISPONIBLES SIN ASIGNAR
+//  Panel sobre las salas con los anestesiologos que entregaron
+//  disponibilidad ese dia. Se arrastra el nombre hasta la sala (o clic en
+//  el nombre y luego clic en la sala). El turno se sugiere segun lo
+//  ofertado y lo que falte por cubrir (AM / PM / Noche). Un nombre ya
+//  asignado se puede arrastrar a otra sala (mover) o al panel (quitar).
+// ══════════════════════════════════════════════════════════════
+let _ddArmado=null, _ddPayload=null, _distSinGuardar=false;
+function dispOfertados(uid,iso){
+  const dp=getDisp(uid,iso);const t=(dp&&dp.turnos)||[];
+  return (t.length&&!t.includes('no'))?t:[];
+}
+function docsConDisp(iso){return getDocs().filter(d=>dispOfertados(d.id,iso).length);}
+function bloquesTurno(t){
+  return ({dia:['AM','PM'],cx:['AM','PM'],guardia:['AM','PM','N'],h6m:['AM'],cxam:['AM'],h6t:['PM'],cxpm:['PM'],noche:['N']})[t||'dia']||[];
+}
+function bloquesTxt(bl){
+  const s=new Set(bl);const out=[];
+  if(s.has('AM')&&s.has('PM')) out.push('día'); else { if(s.has('AM')) out.push('6h AM'); if(s.has('PM')) out.push('6h PM'); }
+  if(s.has('N')) out.push('noche');
+  return out.join(' + ');
+}
+// opts.excluir={from,i}: ignora esa asignacion (cuando se esta moviendo)
+// opts.buffer={idx,users}: usa la lista en edicion del modal para esa sala
+function asignacionesDe(uid,opts){
+  opts=opts||{};const out=[];
+  salasCur.forEach((s,idx)=>{
+    const us=(opts.buffer&&opts.buffer.idx===idx)?opts.buffer.users:(s.cancelada?(s.cancelada.users||[]):(s.users||[]));
+    (us||[]).forEach((u,i)=>{
+      if(u.uid!==uid) return;
+      if(opts.excluir&&opts.excluir.from===idx&&opts.excluir.i===i) return;
+      out.push({idx,turno:u.turno||'dia',canc:!!s.cancelada});
+    });
+  });
+  return out;
+}
+function estadoAsignacion(uid,opts){
+  const of=new Set();dispOfertados(uid,distDate).forEach(t=>bloquesTurno(t).forEach(b=>of.add(b)));
+  const lista=asignacionesDe(uid,opts);
+  const asig=new Set();lista.forEach(a=>bloquesTurno(a.turno).forEach(b=>asig.add(b)));
+  const pend=[...of].filter(b=>!asig.has(b));
+  return {estado:!lista.length?'sin':(pend.length?'parcial':'ok'),pend,lista};
+}
+function salaCorta(s){
+  const M={sala:'Qx',consultorio:'Cons',interconsulta:'AFQ',oncologia:'Onc',sedacion:'Sed',urgencias:'Urg'};
+  return (M[s.tipo]||s.tipo)+s.num;
+}
+// Turno a asignar segun lo ofertado, el tipo de sala y lo que falta por cubrir
+function turnoSugerido(uid,sala,opts){
+  const of=dispOfertados(uid,distDate);
+  const pend=new Set(estadoAsignacion(uid,opts).pend);
+  const orden=sala.tipo==='urgencias'
+    ?['noche','guardia','dia','h6m','h6t']
+    :['dia','h6m','h6t','guardia','noche'];
+  const compat=orden.filter(t=>turnoCompatible(of,t,sala.tipo));
+  if(!compat.length) return null;
+  const cubrePend=compat.find(t=>pend.size&&bloquesTurno(t).every(b=>pend.has(b)));
+  return cubrePend||compat[0];
+}
+function ddPendientes(){
+  if(!salasCur||!salasCur.length) return [];
+  return docsConDisp(distDate).map(d=>{
+    const st=estadoAsignacion(d.id);
+    if(st.estado==='ok') return null;
+    const nom=salaNombreCorto(d,{});
+    const txt=st.estado==='sin'
+      ?`${nom} (ofertó ${etiquetaOferta(dispOfertados(d.id,distDate))}, sin asignar)`
+      :`${nom} (falta ${bloquesTxt(st.pend)})`;
+    return {d,st,txt};
+  }).filter(Boolean);
+}
+function ddMarcarCambios(v){
+  _distSinGuardar=v!==false;
+  const b=document.getElementById('btn-save-dist');
+  if(b){b.classList.toggle('dd-dirty',_distSinGuardar);b.title=_distSinGuardar?'Hay cambios sin guardar':'';}
+}
+function ddMostrarAviso(pend){
+  const el=document.getElementById('dd-aviso-lista');if(!el)return;
+  el.innerHTML=pend.map(x=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;background:${x.st.estado==='sin'?'#fff5f5':'#fffaf0'};border:1px solid ${x.st.estado==='sin'?'#e0a8a8':'#f0c36a'};">
+    <div class="doc-av ${avCls(x.d)}" style="width:24px;height:24px;font-size:8px;">${inics(x.d)}</div>
+    <div style="flex:1;"><div style="font-weight:500;">${escHtml(x.d.nombre+' '+x.d.apellidos)} <span style="font-family:var(--mono);font-size:9px;color:#4e6c8a;">${empresaStr(x.d)}</span></div>
+    <div style="font-family:var(--mono);font-size:9px;color:#4e6c8a;">Ofertó ${escHtml(etiquetaOferta(dispOfertados(x.d.id,distDate)))}${x.st.estado==='sin'?' · sin asignación':' · asignado en '+x.st.lista.map(a=>salaCorta(salasCur[a.idx])).join(', ')+' · falta '+bloquesTxt(x.st.pend)}</div></div></div>`).join('');
+  openModal('modal-dd-aviso');
+}
+function ddChipHtml(d,st,extraCls){
+  const of=etiquetaOferta(dispOfertados(d.id,distDate));
+  const stTxt=st.estado==='sin'?'sin asignar':st.estado==='parcial'?'falta '+bloquesTxt(st.pend):'✓ '+st.lista.map(a=>salaCorta(salasCur[a.idx])+(a.canc?'✕':'')).join(',');
+  const tip=`${d.nombre} ${d.apellidos} · ${empresaStr(d)} · ofertó ${of}`+(st.lista.length?' · asignado: '+st.lista.map(a=>salaLabel(salasCur[a.idx])+' ('+turnoLabel(a.turno)+')'+(a.canc?' [cancelada]':'')).join(', '):'');
+  return `<div class="dd-chip st-${st.estado}${extraCls||''}" draggable="true" data-uid="${d.id}" title="${escHtml(tip)}">
+    <div class="doc-av ${avCls(d)}" style="${isIME(d)?'background:#f59e0b;color:#fff;':''}">${inics(d)}</div>
+    <span>${escHtml(salaNombreCorto(d,{}))}</span><span class="dd-of">${escHtml(of)}</span><span class="dd-st">${escHtml(stTxt)}</span></div>`;
+}
+function renderPoolDisp(){
+  const el=document.getElementById('dist-pool');if(!el)return;
+  if(!APP.canEdit){el.style.display='none';return;}
+  el.style.display='';
+  const docs=docsConDisp(distDate);
+  if(_ddArmado&&!docs.some(d=>d.id===_ddArmado)) _ddArmado=null;
+  if(!docs.length){
+    el.innerHTML='<div class="dd-pool-hdr">Disponibles · <b>nadie registró disponibilidad para este día</b></div>';
+    ddPrepararPool(el);return;
+  }
+  const rank={sin:0,parcial:1,ok:2};
+  const items=docs.map(d=>({d,st:estadoAsignacion(d.id)}))
+    .sort((a,b)=>rank[a.st.estado]-rank[b.st.estado]||(a.d.apellidos||'').localeCompare(b.d.apellidos||''));
+  const nSin=items.filter(x=>x.st.estado==='sin').length, nPar=items.filter(x=>x.st.estado==='parcial').length;
+  el.innerHTML=`<div class="dd-pool-hdr">Disponibles <b>${items.length}</b>
+      ${nSin?`<span class="badge" style="background:#fbeaea;color:#8b1a1a;">Sin asignar: ${nSin}</span>`:''}
+      ${nPar?`<span class="badge" style="background:#fff3dc;color:#7a4800;">Parcial: ${nPar}</span>`:''}
+      ${!nSin&&!nPar?'<span class="badge col">Todos asignados</span>':''}
+      <span class="dd-pool-hint">Arrastra el nombre hasta la sala · o clic en el nombre y clic en la sala · arrastra aquí un nombre asignado para quitarlo</span></div>
+    <div class="dd-chips">${items.map(x=>ddChipHtml(x.d,x.st,x.d.id===_ddArmado?' armado':'')).join('')}</div>`;
+  ddPrepararPool(el);
+  document.querySelectorAll('#salas-grid .sala-card').forEach(c=>c.classList.toggle('dd-target',!!_ddArmado&&!c.classList.contains('cancelada')));
+}
+function ddPrepararPool(el){
+  el.querySelectorAll('.dd-chip').forEach(ch=>{
+    ch.addEventListener('dragstart',e=>{
+      _ddPayload={uid:ch.dataset.uid};
+      try{e.dataTransfer.setData('text/plain',ch.dataset.uid);e.dataTransfer.effectAllowed='copyMove';}catch(_){}
+      ch.classList.add('dragging');
+    });
+    ch.addEventListener('dragend',()=>{ch.classList.remove('dragging');_ddPayload=null;});
+    ch.addEventListener('click',()=>{
+      _ddArmado=_ddArmado===ch.dataset.uid?null:ch.dataset.uid;
+      renderPoolDisp();
+      if(_ddArmado) toast('Ahora haz clic en la sala de destino (Esc para cancelar)','info');
+    });
+  });
+  if(el._ddListo) return; el._ddListo=true;
+  // Soltar en el panel un nombre ya asignado = quitarlo de su sala
+  el.addEventListener('dragover',e=>{if(_ddPayload&&_ddPayload.from!=null){e.preventDefault();el.classList.add('dd-over');}});
+  el.addEventListener('dragleave',e=>{if(!el.contains(e.relatedTarget))el.classList.remove('dd-over');});
+  el.addEventListener('drop',e=>{
+    e.preventDefault();el.classList.remove('dd-over');
+    const p=_ddPayload;_ddPayload=null;
+    if(!p||p.from==null) return;
+    const s=salasCur[p.from];if(!s||!s.users||!s.users[p.i])return;
+    const u=s.users.splice(p.i,1)[0];
+    salaSyncLegacy(p.from);ddMarcarCambios();renderSalas();
+    toast(`${salaNombreCorto(getP(u.uid),u)} quitado de ${salaLabel(s)}`,'info');
+  });
+}
+function ddHabilitarCard(card,idx){
+  card.querySelectorAll('.sala-row[draggable="true"]').forEach(r=>{
+    r.addEventListener('dragstart',e=>{
+      _ddPayload={uid:r.dataset.uid,from:parseInt(r.dataset.from),i:parseInt(r.dataset.i)};
+      try{e.dataTransfer.setData('text/plain',r.dataset.uid);e.dataTransfer.effectAllowed='move';}catch(_){}
+      e.stopPropagation();
+    });
+    r.addEventListener('dragend',()=>{_ddPayload=null;});
+  });
+  card.addEventListener('dragover',e=>{if(_ddPayload){e.preventDefault();card.classList.add('dd-over');}});
+  card.addEventListener('dragleave',e=>{if(!card.contains(e.relatedTarget))card.classList.remove('dd-over');});
+  card.addEventListener('drop',e=>{
+    e.preventDefault();card.classList.remove('dd-over');
+    const p=_ddPayload;_ddPayload=null;
+    if(!p) return;
+    ddAsignar(p.uid,idx,p.from!=null?{from:p.from,i:p.i}:null);
+  });
+  card.addEventListener('click',e=>{
+    if(!_ddArmado||e.target.closest('button')) return;
+    const uid=_ddArmado;_ddArmado=null;
+    ddAsignar(uid,idx,null);
+  });
+}
+function ddAsignar(uid,idx,origen){
+  const sala=salasCur[idx];
+  if(!sala) return;
+  if(sala.cancelada){toast('Esta sala está cancelada — reactívala primero','info');renderPoolDisp();return;}
+  if(origen&&origen.from===idx) return;
+  const doc=getP(uid);if(!doc)return;
+  const nom=salaNombreCorto(doc,{});
+  if(!isIME(doc)&&(sala.users||[]).some(u=>u.uid===uid)){toast(`${nom} ya está en ${salaLabel(sala)}`,'info');renderPoolDisp();return;}
+  const prev=origen?salasCur[origen.from]?.users?.[origen.i]:null;
+  if(origen&&!prev) return;
+  const of=dispOfertados(uid,distDate);
+  let turno;
+  if(isIME(doc)&&!of.length) turno=prev?prev.turno:(sala.tipo==='urgencias'?'noche':'dia');
+  else if(prev&&(turnoCompatible(of,prev.turno,sala.tipo)||!of.length)) turno=prev.turno||'dia';
+  else turno=turnoSugerido(uid,sala,origen?{excluir:origen}:null);
+  if(!turno){
+    toast(`⚠️ ${nom} ofertó "${etiquetaOferta(of)}" — no es compatible con ${salaLabel(sala)}`,'error');
+    renderPoolDisp();return;
+  }
+  let entry;
+  if(prev){
+    entry={...prev,turno};
+    salasCur[origen.from].users.splice(origen.i,1);
+    salaSyncLegacy(origen.from);
+  }else{
+    entry={uid,turno};
+    if(isIME(doc)){
+      entry.imeNombre=(doc.nombre&&doc.nombre!=='IME')?(doc.nombre+' '+(doc.apellidos||'')).trim():'';
+      entry.cedula='';
+    }
+  }
+  sala.users=[...(sala.users||[]),entry];
+  salaSyncLegacy(idx);salaAutoPareja(idx);
+  ddMarcarCambios();renderSalas();
+  toast(`${nom} → ${salaLabel(sala)} · ${turnoLabel(turno)}. Recuerda Guardar.`,'success');
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_ddArmado){_ddArmado=null;renderPoolDisp();}});
+// Modal de sala: disponibles pendientes (arrastrar a "asignados" o clic)
+function msRenderPool(){
+  const el=document.getElementById('ms-pool');if(!el)return;
+  const idx=parseInt(document.getElementById('ms-idx').value);
+  const buf={idx,users:_msUsers};
+  const items=docsConDisp(distDate).map(d=>({d,st:estadoAsignacion(d.id,{buffer:buf})}))
+    .filter(x=>x.st.estado!=='ok'&&!_msUsers.some(u=>u.uid===x.d.id))
+    .sort((a,b)=>(a.st.estado==='sin'?0:1)-(b.st.estado==='sin'?0:1)||(a.d.apellidos||'').localeCompare(b.d.apellidos||''));
+  el.innerHTML=items.length?items.map(x=>ddChipHtml(x.d,x.st,'')).join('')
+    :'<div style="font-family:var(--mono);font-size:10px;color:#0a6a40;padding:2px 0;">✓ Todos los que entregaron disponibilidad ya tienen asignación</div>';
+  el.querySelectorAll('.dd-chip').forEach(ch=>{
+    ch.addEventListener('dragstart',e=>{_ddPayload={uid:ch.dataset.uid,modal:true};try{e.dataTransfer.setData('text/plain',ch.dataset.uid);}catch(_){}ch.classList.add('dragging');});
+    ch.addEventListener('dragend',()=>{ch.classList.remove('dragging');_ddPayload=null;});
+    ch.addEventListener('click',()=>msAgregarDesdeChip(ch.dataset.uid));
+  });
+  const zona=document.getElementById('ms-asignados');
+  if(zona&&!zona._ddListo){
+    zona._ddListo=true;
+    zona.addEventListener('dragover',e=>{if(_ddPayload&&_ddPayload.modal){e.preventDefault();zona.classList.add('dd-over');}});
+    zona.addEventListener('dragleave',e=>{if(!zona.contains(e.relatedTarget))zona.classList.remove('dd-over');});
+    zona.addEventListener('drop',e=>{
+      e.preventDefault();zona.classList.remove('dd-over');
+      const p=_ddPayload;_ddPayload=null;
+      if(p&&p.modal) msAgregarDesdeChip(p.uid);
+    });
+  }
+}
+function msAgregarDesdeChip(uid){
+  const idx=parseInt(document.getElementById('ms-idx').value);
+  const sala=salasCur[idx];if(!sala)return;
+  if(_msUsers.some(u=>u.uid===uid)){toast('Ya está asignado a esta sala','info');return;}
+  const t=turnoSugerido(uid,sala,{buffer:{idx,users:_msUsers}});
+  const doc=getP(uid);
+  if(!t){toast(`⚠️ ${doc?doc.nombre+' '+doc.apellidos:''} ofertó "${etiquetaOferta(dispOfertados(uid,distDate))}" — no es compatible con ${salaLabel(sala)}`,'error');return;}
+  document.getElementById('ms-doc').value=uid;
+  msOnDocChange();
+  document.getElementById('ms-turno').value=t;
+  msAgregarDoc();
 }
 function autoAsignar(){ if(!APP.canEdit){toast('Sin permisos de edición','info');return;}
   const disp=[...getDocs().filter(d=>{const dp=getDisp(d.id,distDate);return dp&&dp.turnos&&!dp.turnos.includes('no')&&dp.turnos.length;})].sort(()=>Math.random()-.5);
@@ -6447,7 +6779,7 @@ function autoAsignar(){ if(!APP.canEdit){toast('Sin permisos de edición','info'
     s.users=d?[{uid:d.id,turno:'dia'}]:[];
     s.user_id=d?d.id:null;
   });
-  renderSalas();toast('Auto-asignacion aplicada. Guarda antes de continuar.','info');
+  ddMarcarCambios();renderSalas();toast('Auto-asignacion aplicada. Guarda antes de continuar.','info');
 }
 // ══════════════════════════════════════════════════════════════
 //  CANCELACION DE SALAS PLANIFICADAS (v2.21.0)
@@ -7322,6 +7654,9 @@ async function guardarDist(){
   if(res.error){toast('Error: '+res.error.message,'error');return;}
   APP.dist[distDate]={id:res.data?.id||ex?.id,cfg,salas:salasCur};
   toast('Distribucion guardada','success');
+  ddMarcarCambios(false);
+  const pend=ddPendientes();
+  if(pend.length) ddMostrarAviso(pend);
 }
 
 // ══════════════════════════════════════════════════════════════
