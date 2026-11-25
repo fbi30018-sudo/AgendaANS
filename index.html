@@ -390,6 +390,101 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
 .sala-row[draggable="true"]{cursor:grab;}
 #ms-asignados.dd-over{outline:2px dashed #1a5cbf;outline-offset:2px;border-radius:4px;background:#f3f8ff;}
 #btn-save-dist.dd-dirty{box-shadow:0 0 0 3px rgba(217,119,6,.55);}
+/* v2.41.0 — Vistas de distribucion, hoja de asignacion, mi agenda, cobertura */
+.vista-sw{display:inline-flex;border:1px solid #c8d4e0;border-radius:8px;overflow:hidden;background:#fff;}
+.vista-sw button{border:none;background:#fff;color:#4e6c8a;font-size:11px;font-weight:600;padding:7px 12px;cursor:pointer;min-height:34px;}
+.vista-sw button+button{border-left:1px solid #c8d4e0;}
+.vista-sw button.on{background:#1a5cbf;color:#fff;}
+.dist-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:12px;}
+.dist-kpi{background:#fff;border:1px solid #dfe7f0;border-radius:10px;padding:9px 12px;}
+.dist-kpi .k-l{font-family:var(--mono);font-size:9px;color:#4e6c8a;text-transform:uppercase;letter-spacing:.5px;}
+.dist-kpi .k-v{font-size:22px;font-weight:700;color:#0d1f35;line-height:1.2;}
+.dist-kpi .k-v small{font-size:12px;color:#4e6c8a;font-weight:500;}
+.dist-kpi .k-bar{height:5px;border-radius:3px;background:#e3e9f1;margin-top:4px;overflow:hidden;}
+.dist-kpi .k-bar>div{height:100%;background:#0a7a4a;}
+.dist-kpi.rojo{background:#fff4f4;border-color:#f1c4c4;}.dist-kpi.rojo .k-l,.dist-kpi.rojo .k-v{color:#9b1c1c;}
+.dist-kpi.ambar{background:#fff8ec;border-color:#f3d7a6;}.dist-kpi.ambar .k-l,.dist-kpi.ambar .k-v{color:#8a4b00;}
+@media(max-width:800px){.dist-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}}
+.tl-wrap{border:1px solid #dfe7f0;border-radius:12px;overflow-x:auto;background:#fff;}
+.tl-in{min-width:640px;}
+.tl-row{display:grid;grid-template-columns:170px repeat(3,minmax(0,1fr));border-bottom:1px solid #eef2f7;position:relative;}
+.tl-row:last-child{border-bottom:none;}
+.tl-head{background:#f8fafc;border-bottom:1px solid #dfe7f0;font-family:var(--mono);font-size:10px;color:#4e6c8a;}
+.tl-head>div{padding:9px 10px;}
+.tl-lbl{padding:9px 12px;font-size:12px;font-weight:600;color:#0d1f35;display:flex;flex-direction:column;justify-content:center;cursor:pointer;}
+.tl-lbl span{font-family:var(--mono);font-size:9px;font-weight:500;color:#4e6c8a;text-transform:uppercase;letter-spacing:.5px;}
+.tl-bg{border-left:1px solid #e8edf4;min-height:46px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#8aa0b8;cursor:pointer;}
+.tl-bg.noche{background:#f4f5fb;}
+.tl-bg.libre{margin:5px;border:1.5px dashed #b9c7d8;border-radius:8px;min-height:36px;}
+.tl-bg.dd-over{background:#e8f1ff;outline:2px dashed #1a5cbf;outline-offset:-3px;color:#1a5cbf;}
+.tl-bar{position:relative;z-index:1;margin:5px;border-radius:8px;color:#fff;padding:6px 10px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;cursor:pointer;}
+.tl-bar small{font-family:var(--mono);font-size:10px;font-weight:500;opacity:.9;white-space:nowrap;}
+.tl-bar .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tl-bar.hosp{background:#e0f2f6!important;color:#0e5a70;font-weight:500;}
+.tl-row.canc .tl-lbl{color:#8b1a1a;text-decoration:line-through;}
+.tl-row.sincubrir .tl-lbl span{color:#9b1c1c;}
+.sv-wrap{background:#0a1322;border-radius:14px;padding:16px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;}
+.sv-col{flex:1 1 230px;min-width:0;display:flex;flex-direction:column;gap:10px;}
+.sv-col-t{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;}
+.sv-card{background:#111e33;border:1px solid #1f3150;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;cursor:pointer;}
+.sv-card.dd-over{outline:2px dashed #8cc4ff;outline-offset:2px;}
+.sv-card.vacia{border:1.5px dashed #f87171;background:#1a1420;}
+.sv-card.canc{opacity:.6;}
+.sv-card.dd-target{outline:1px dashed #8cc4ff;outline-offset:2px;}
+.sv-h{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#eaf1fb;}
+.sv-h .pill{margin-left:auto;font-family:var(--mono);font-size:10px;font-weight:400;color:#9fb3cc;}
+.sv-h button{background:none;border:1px solid #2a4066;color:#9fb3cc;border-radius:6px;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
+.sv-h button svg{width:13px;height:13px;}
+.sv-row{display:flex;align-items:center;gap:8px;font-size:13px;color:#dce6f3;}
+.sv-row[draggable="true"]{cursor:grab;}
+.sv-av{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#0a1322;flex-shrink:0;}
+.sv-tag{margin-left:auto;font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:5px;color:#fff;}
+.sv-empty{font-size:12px;color:#fca5a5;}
+.dd-hoja{width:min(96vw,520px);max-height:86vh;overflow-y:auto;}
+.dd-op{display:flex;align-items:center;gap:10px;width:100%;min-height:54px;padding:8px 12px;border-radius:12px;border:1px solid #dfe7f0;background:#fff;color:#0d1f35;font-size:14px;text-align:left;cursor:pointer;margin-bottom:6px;}
+.dd-op:hover{border-color:#1a5cbf;background:#f3f8ff;}
+.dd-op .doc-av{width:32px;height:32px;font-size:10px;flex-shrink:0;}
+.dd-op small{display:block;font-size:11px;color:#4e6c8a;}
+@media(max-width:800px){
+  #modal-dd-hoja{align-items:flex-end;}
+  #modal-dd-hoja .dd-hoja{width:100vw;max-width:100vw;border-radius:20px 20px 0 0;}
+  .dash-grid{grid-template-columns:1fr!important;}
+  .vista-sw button{padding:8px 9px;}
+}
+.ma-hero{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px;}
+.ma-next{flex:1 1 300px;background:#1a5cbf;color:#fff;border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;}
+.ma-next .ma-k{font-family:var(--mono);font-size:10px;opacity:.85;letter-spacing:.6px;}
+.ma-next .ma-sala{font-size:22px;font-weight:700;}
+.ma-next .ma-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
+.ma-next .ma-acts button{flex:1 1 140px;min-height:44px;border-radius:10px;border:none;font-weight:600;font-size:13px;cursor:pointer;}
+.ma-week{flex:2 1 380px;background:#fff;border:1px solid #dfe7f0;border-radius:16px;padding:12px;}
+.ma-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;}
+.ma-day{display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 0;border-radius:10px;font-size:11px;color:#4e6c8a;}
+.ma-day b{font-size:15px;color:#0d1f35;}
+.ma-day.hoy{background:#e8f1ff;}
+.ma-chip{font-family:var(--mono);font-size:9px;color:#fff;border-radius:5px;padding:2px 5px;}
+.ma-chip.of{background:#fff!important;color:#4e6c8a;border:1px dashed #9ab0c8;}
+.ma-side{flex:1 1 220px;display:flex;flex-direction:column;gap:10px;}
+.ma-card{background:#fff;border:1px solid #dfe7f0;border-radius:14px;padding:12px 14px;}
+.ma-card .ma-v{font-size:24px;font-weight:700;color:#0d1f35;}
+.ma-aviso{display:flex;align-items:center;gap:10px;background:#fff8ec;border:1px solid #f3d7a6;border-radius:14px;padding:12px 14px;color:#5c3300;cursor:pointer;width:100%;text-align:left;font-size:13px;}
+.cob-layout{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;}
+.cob-cal{flex:999 1 560px;min-width:0;}
+.cob-side{flex:1 1 260px;max-width:360px;display:flex;flex-direction:column;gap:12px;}
+.cob-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;}
+.cob-dh{font-family:var(--mono);font-size:10px;color:#4e6c8a;text-transform:uppercase;padding:0 4px 4px;}
+.cob-d{min-height:86px;border-radius:10px;padding:8px;box-sizing:border-box;border:1px solid transparent;cursor:pointer;display:flex;flex-direction:column;gap:2px;color:#0d1f35;background:#f3f6fa;text-align:left;font:inherit;}
+.cob-d:hover{box-shadow:0 3px 12px rgba(13,31,53,.15);}
+.cob-d .n{font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:baseline;}
+.cob-d .n span{font-family:var(--mono);font-size:8px;color:#5b3aa6;font-weight:500;}
+.cob-d .l{font-family:var(--mono);font-size:10px;color:#3b4f66;}
+.cob-d.verde{background:#cdeedd;}.cob-d.ambar{background:#fde7c2;}.cob-d.rojo{background:#f8caca;}
+.cob-d.fest{border:2px solid #5b3aa6;}
+.cob-d.hoy{box-shadow:0 0 0 2px #1a5cbf inset;}
+.cob-ley{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:#44586f;margin-bottom:10px;}
+.cob-ley i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px;}
+@media(max-width:600px){.cob-d{min-height:64px;padding:5px;}.cob-d .l{font-size:8px;}}
+
 
 .sala-name{font-size:11px;font-weight:600;color:#0d1f35;}
 .sala-body{padding:10px 12px;min-height:52px;background:#fff;}
@@ -1086,6 +1181,9 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
       </div>
       <div class="sb-sec" id="nav-admin" style="display:none;">
         <div class="sb-lbl">Administracion</div>
+        <button class="nav-item" onclick="navTo('cobertura')" data-v="cobertura" id="nav-cobertura">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><rect x="7" y="13" width="3" height="3"/><rect x="14" y="13" width="3" height="3"/></svg>Cobertura del mes
+        </button>
         <button class="nav-item" id="nav-cuadro" onclick="navTo('cuadro')" data-v="cuadro" style="display:none;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Cuadro
         </button>
@@ -1105,8 +1203,9 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
           <div><h2>Dashboard</h2><p id="dash-fecha">—</p></div>
           <div class="page-actions" id="dash-actions"></div>
         </div>
+        <div id="dash-agenda"></div>
         <div class="stats" id="dash-stats"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="dash-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
           <div class="panel-box">
             <div class="panel-hdr">
               <div><h3 id="dash-t1">Asignaciones hoy</h3><div style="font-family:var(--mono);font-size:9px;color:#4e6c8a;margin-top:2px;" id="dash-f1">—</div></div>
@@ -1118,6 +1217,23 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
             <div class="panel-hdr"><div><h3 id="dash-t2">Disponibilidad semana</h3></div></div>
             <div id="dash-semana"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- COBERTURA DEL MES (v2.41.0) -->
+      <div id="view-cobertura" class="view">
+        <div class="page-hdr">
+          <div><h2 id="cob-titulo">Cobertura del mes</h2><p>Disponibles frente a puestos programados, día por día. Toque un día para abrir su distribución.</p></div>
+          <div class="page-actions" style="display:flex;gap:6px;">
+            <button class="btn" onclick="cobNav(-1)" aria-label="Mes anterior">←</button>
+            <button class="btn" onclick="cobNav(0)">Este mes</button>
+            <button class="btn" onclick="cobNav(1)" aria-label="Mes siguiente">→</button>
+          </div>
+        </div>
+        <div class="cob-ley"><span><i style="background:#cdeedd"></i>Sobra personal</span><span><i style="background:#fde7c2"></i>Justo</span><span><i style="background:#f8caca"></i>Faltan</span><span><i style="background:#f3f6fa;border:1px solid #c8d4e0"></i>Sin programa guardado</span><span><i style="border:2px solid #5b3aa6"></i>Festivo</span></div>
+        <div class="cob-layout">
+          <div class="panel-box cob-cal" id="cob-cal"></div>
+          <div class="cob-side" id="cob-side"></div>
         </div>
       </div>
 
@@ -1294,9 +1410,16 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
         <div class="panel-box">
           <div class="panel-hdr">
             <div><h3>Asignacion</h3><div style="font-family:var(--mono);font-size:9px;color:#4e6c8a;margin-top:2px;" id="dist-disp-lbl">—</div></div>
+            <div class="vista-sw" id="dist-vista-sw" role="group" aria-label="Vista de la distribución">
+              <button type="button" data-vista="tarjetas" onclick="setDistVista('tarjetas')">Tarjetas</button>
+              <button type="button" data-vista="linea" onclick="setDistVista('linea')">Línea de tiempo</button>
+              <button type="button" data-vista="servicio" onclick="setDistVista('servicio')">Por servicio</button>
+            </div>
           </div>
+          <div class="dist-kpis" id="dist-kpis" style="display:none;"></div>
           <div class="dd-pool" id="dist-pool" style="display:none;"></div>
           <div class="salas-grid" id="salas-grid"></div>
+          <div id="salas-alt" style="display:none;"></div>
         </div>
         <div class="panel-box"><h3 style="margin-bottom:10px;">Resumen</h3><div id="dist-resumen"></div></div>
         <!-- Panel texto programación -->
@@ -2140,6 +2263,20 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
   </div>
 </div>
 
+<!-- HOJA DE ASIGNACION RAPIDA (v2.41.0) -->
+<div class="overlay" id="modal-dd-hoja">
+  <div class="modal dd-hoja">
+    <div class="modal-hdr"><h3 id="ddh-titulo">Asignar</h3><button class="modal-x" onclick="closeModal('modal-dd-hoja')">✕</button></div>
+    <div id="ddh-sub" style="font-family:var(--mono);font-size:10px;color:#4e6c8a;margin:-4px 0 10px;"></div>
+    <div id="ddh-lista"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-dd-hoja')">Cerrar</button>
+      <div style="flex:1"></div>
+      <button class="btn prim" id="ddh-mas">Más opciones</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL AVISO DISPONIBLES SIN ASIGNAR (v2.40.0) -->
 <div class="overlay" id="modal-dd-aviso">
   <div class="modal" style="width:min(94vw,520px);max-height:85vh;overflow-y:auto;">
@@ -2612,6 +2749,13 @@ async function dbWrite(method, path, body){
 //  y la pantalla de login siempre muestran la primera entrada.
 // ══════════════════════════════════════════════════════════════
 const CHANGELOG=[
+  {v:'2.41.0',n:'Nuevas vistas y mi agenda',f:'2026-11-25',cambios:[
+    'Distribución de Salas: selector de vista arriba a la derecha. "Línea de tiempo" muestra cada sala con sus franjas AM (07–13), PM (13–19) y Noche (19–07); al soltar un nombre sobre una franja el turno se ajusta a esa franja. "Por servicio" agrupa las salas en Quirófanos, Consulta externa, Fuera de quirófano y Noche, en modo oscuro. "Tarjetas" es la vista de siempre. La app recuerda la última vista elegida.',
+    'Indicadores del día sobre las salas: puestos activos, cubiertos, con disponibilidad, sin asignar y con horas sin cubrir.',
+    'Asignación rápida: al tocar una sala (o una franja en la línea de tiempo) se abre una lista con solo los anestesiólogos compatibles; un toque y queda asignado. Pensado para el celular, funciona también en el computador. "Más opciones" abre la ventana completa de la sala.',
+    'Dashboard: nueva sección "Mi agenda" para cada anestesiólogo, con la próxima asignación (sala, turno y horario), botón para agregarla al calendario del celular, la semana con sus turnos, las horas del mes y un aviso si aún no entregó la disponibilidad del mes siguiente. En celular el Dashboard ahora queda en una sola columna.',
+    'Nuevo menú "Cobertura del mes" (administrador): calendario que compara disponibles contra puestos programados por día (verde sobra, ámbar justo, rojo faltan), con festivos marcados, días por reforzar y quién falta por entregar disponibilidad, más un botón para copiar el recordatorio para WhatsApp. Tocar un día abre su distribución.'
+  ]},
   {v:'2.40.0',n:'Asignación arrastrando nombres',f:'2026-11-25',cambios:[
     'Nuevo: en Distribución de Salas aparece arriba un panel con los anestesiólogos que entregaron disponibilidad ese día. Se arrastra el nombre hasta la sala (o clic en el nombre y luego clic en la sala). El turno se elige solo según lo ofertado y lo que falte por cubrir (por ejemplo, quien ofertó 24 h queda de día en una sala y luego de noche en el Quirófano Urgente).',
     'Un nombre ya asignado se puede arrastrar a otra sala para moverlo, o devolverlo al panel para quitarlo. El turno se puede ajustar después con el lápiz de la sala.',
@@ -3376,7 +3520,18 @@ function navTo(v){
   const nEl=document.querySelector(`[data-v="${v}"]`);if(nEl)nEl.classList.add('on');
   const now=new Date();
   const loaders={
-    dashboard:()=>{cargarCancelaciones().then(renderDashboard);},
+    dashboard:()=>{
+      const sig=new Date(now.getFullYear(),now.getMonth()+1,1);
+      Promise.all([
+        cargarCancelaciones(),
+        cargarDispMes(now.getFullYear(),now.getMonth()).catch(()=>{}),
+        cargarDispMes(sig.getFullYear(),sig.getMonth()).catch(()=>{}),
+      ]).then(renderDashboard);
+    },
+    cobertura:()=>{
+      if(cobY==null){cobY=now.getFullYear();cobM=now.getMonth();}
+      Promise.all([cargarPerfiles(),cargarDispMes(cobY,cobM)]).then(renderCobertura);
+    },
     cuadro:()=>{
       cuadroMes=new Date().getMonth();
       cuadroAnio=new Date().getFullYear();
@@ -3427,6 +3582,7 @@ function renderDashboard(){
   const docs=getDocs(),dist=APP.dist[iso]||{salas:[]};
   const lunes=new Date(now);lunes.setDate(now.getDate()-((now.getDay()+6)%7));
   const ds=document.getElementById('dash-stats');if(!ds)return;
+  try{renderMiAgenda();}catch(e){console.error('renderMiAgenda',e);}
 
   // Actions — reset on every render
   const da=document.getElementById('dash-actions');
@@ -6261,6 +6417,8 @@ function renderSalas(){
     grid.appendChild(card);
   });
   renderPoolDisp();
+  renderDistKpis();
+  renderVistaAlt();
   // Resumen completo para todos (admin y anestesiologo)
   // El anestesiologo ve el mismo resumen pero con su sala destacada arriba
   const canceladas=salasCur.filter(s=>s.cancelada);
@@ -6604,8 +6762,9 @@ function turnoSugerido(uid,sala,opts){
   const orden=sala.tipo==='urgencias'
     ?['noche','guardia','dia','h6m','h6t']
     :['dia','h6m','h6t','guardia','noche'];
-  const compat=orden.filter(t=>turnoCompatible(of,t,sala.tipo));
-  if(!compat.length) return null;
+  const compat0=orden.filter(t=>turnoCompatible(of,t,sala.tipo));
+  if(!compat0.length) return null;
+  const compat=preferirLibres(compat0,salaOcupados(sala,uid,opts));
   const cubrePend=compat.find(t=>pend.size&&bloquesTurno(t).every(b=>pend.has(b)));
   return cubrePend||compat[0];
 }
@@ -6663,7 +6822,7 @@ function renderPoolDisp(){
       <span class="dd-pool-hint">Arrastra el nombre hasta la sala · o clic en el nombre y clic en la sala · arrastra aquí un nombre asignado para quitarlo</span></div>
     <div class="dd-chips">${items.map(x=>ddChipHtml(x.d,x.st,x.d.id===_ddArmado?' armado':'')).join('')}</div>`;
   ddPrepararPool(el);
-  document.querySelectorAll('#salas-grid .sala-card').forEach(c=>c.classList.toggle('dd-target',!!_ddArmado&&!c.classList.contains('cancelada')));
+  document.querySelectorAll('#salas-grid .sala-card,#salas-alt .sv-card').forEach(c=>c.classList.toggle('dd-target',!!_ddArmado&&!c.classList.contains('cancelada')&&!c.classList.contains('canc')));
 }
 function ddPrepararPool(el){
   el.querySelectorAll('.dd-chip').forEach(ch=>{
@@ -6711,12 +6870,13 @@ function ddHabilitarCard(card,idx){
     ddAsignar(p.uid,idx,p.from!=null?{from:p.from,i:p.i}:null);
   });
   card.addEventListener('click',e=>{
-    if(!_ddArmado||e.target.closest('button')) return;
+    if(e.target.closest('button')) return;
+    if(!_ddArmado){ if(!e.target.closest('.sala-row')) abrirHojaAsignar(idx); return; }
     const uid=_ddArmado;_ddArmado=null;
     ddAsignar(uid,idx,null);
   });
 }
-function ddAsignar(uid,idx,origen){
+function ddAsignar(uid,idx,origen,bloque){
   const sala=salasCur[idx];
   if(!sala) return;
   if(sala.cancelada){toast('Esta sala está cancelada — reactívala primero','info');renderPoolDisp();return;}
@@ -6728,9 +6888,11 @@ function ddAsignar(uid,idx,origen){
   if(origen&&!prev) return;
   const of=dispOfertados(uid,distDate);
   let turno;
-  if(isIME(doc)&&!of.length) turno=prev?prev.turno:(sala.tipo==='urgencias'?'noche':'dia');
+  const optsEx=origen?{excluir:origen}:null;
+  if(isIME(doc)&&!of.length) turno=bloque==='N'?'noche':bloque==='AM'?'h6m':bloque==='PM'?'h6t':(prev?prev.turno:(sala.tipo==='urgencias'?'noche':'dia'));
+  else if(bloque) turno=turnoParaBloque(uid,sala,bloque,optsEx);
   else if(prev&&(turnoCompatible(of,prev.turno,sala.tipo)||!of.length)) turno=prev.turno||'dia';
-  else turno=turnoSugerido(uid,sala,origen?{excluir:origen}:null);
+  else turno=turnoSugerido(uid,sala,optsEx);
   if(!turno){
     toast(`⚠️ ${nom} ofertó "${etiquetaOferta(of)}" — no es compatible con ${salaLabel(sala)}`,'error');
     renderPoolDisp();return;
@@ -6791,6 +6953,381 @@ function msAgregarDesdeChip(uid){
   msOnDocChange();
   document.getElementById('ms-turno').value=t;
   msAgregarDoc();
+}
+// ══════════════════════════════════════════════════════════════
+//  v2.41.0 — VISTAS DE DISTRIBUCION (Tarjetas / Linea de tiempo / Por servicio)
+//  Las tres vistas leen y modifican el mismo salasCur. Arrastrar y soltar,
+//  clic-clic y la hoja de asignacion rapida funcionan en todas.
+// ══════════════════════════════════════════════════════════════
+let _distVista=(()=>{try{return localStorage.getItem('ans-dist-vista')||'tarjetas';}catch(_){return 'tarjetas';}})();
+function setDistVista(v){
+  _distVista=v;
+  try{localStorage.setItem('ans-dist-vista',v);}catch(_){}
+  renderVistaAlt();
+}
+const TL_BLQ=['AM','PM','N'];
+const TL_COL={AM:2,PM:3,N:4};
+// Bloques ya cubiertos en la sala por otros anestesiologos (no hospitalarios)
+function salaOcupados(sala,uid,opts){
+  const idx=salasCur.indexOf(sala);
+  const us=(opts&&opts.buffer&&opts.buffer.idx===idx)?opts.buffer.users:(sala.users||[]);
+  const oc=new Set();
+  us.forEach((u,i)=>{
+    if(u.uid===uid) return;
+    if(opts&&opts.excluir&&opts.excluir.from===idx&&opts.excluir.i===i) return;
+    if(esHosp(getP(u.uid))) return;
+    bloquesTurno(u.turno||'dia').forEach(b=>oc.add(b));
+  });
+  return oc;
+}
+function preferirLibres(cands,oc){
+  const libres=cands.filter(t=>bloquesTurno(t).every(b=>!oc.has(b)));
+  return libres.length?libres:cands;
+}
+function turnoParaBloque(uid,sala,B,opts){
+  const of=dispOfertados(uid,distDate);
+  const pend=new Set(estadoAsignacion(uid,opts).pend);
+  const cands=['dia','h6m','h6t','noche','guardia'].filter(t=>bloquesTurno(t).includes(B)&&turnoCompatible(of,t,sala.tipo));
+  if(!cands.length) return null;
+  const sinN=B==='N'?cands:cands.filter(t=>!bloquesTurno(t).includes('N'));
+  const base=preferirLibres(sinN.length?sinN:cands,salaOcupados(sala,uid,opts));
+  const enPend=base.filter(t=>pend.size&&bloquesTurno(t).every(b=>pend.has(b)));
+  const lista=enPend.length?enPend:base;
+  if(B==='N'&&lista.includes('noche')) return 'noche';
+  return lista.slice().sort((a,b)=>bloquesTurno(b).length-bloquesTurno(a).length)[0];
+}
+function salaHorario(sala){
+  return sala.tipo==='urgencias'?'19–07':'07–19';
+}
+// Zona de soltar generica. getBloque(e) devuelve 'AM'|'PM'|'N'|null segun donde se suelta.
+function ddZona(el,idx,getBloque,marcar){
+  el.addEventListener('dragover',e=>{
+    if(!_ddPayload) return; e.preventDefault();
+    const m=marcar?marcar(e):el; if(el._ddM&&el._ddM!==m) el._ddM.classList.remove('dd-over');
+    el._ddM=m; m&&m.classList.add('dd-over');
+  });
+  el.addEventListener('dragleave',e=>{if(!el.contains(e.relatedTarget)&&el._ddM){el._ddM.classList.remove('dd-over');el._ddM=null;}});
+  el.addEventListener('drop',e=>{
+    e.preventDefault(); if(el._ddM){el._ddM.classList.remove('dd-over');el._ddM=null;}
+    const p=_ddPayload;_ddPayload=null; if(!p) return;
+    ddAsignar(p.uid,idx,p.from!=null?{from:p.from,i:p.i}:null,getBloque?getBloque(e):null);
+  });
+}
+function ddArrastrable(el){
+  el.addEventListener('dragstart',e=>{
+    _ddPayload={uid:el.dataset.uid,from:parseInt(el.dataset.from),i:parseInt(el.dataset.i)};
+    try{e.dataTransfer.setData('text/plain',el.dataset.uid);e.dataTransfer.effectAllowed='move';}catch(_){}
+    e.stopPropagation();
+  });
+  el.addEventListener('dragend',()=>{_ddPayload=null;});
+}
+function renderDistKpis(){
+  const el=document.getElementById('dist-kpis');if(!el)return;
+  if(!APP.canEdit||!salasCur.length){el.style.display='none';return;}
+  const act=salasCur.filter(s=>!s.cancelada);
+  const cub=act.filter(s=>(s.users||[]).length).length;
+  const docs=docsConDisp(distDate);
+  const st=docs.map(d=>estadoAsignacion(d.id).estado);
+  const nSin=st.filter(x=>x==='sin').length, nPar=st.filter(x=>x==='parcial').length;
+  const pct=act.length?Math.round(cub*100/act.length):0;
+  el.style.display='';
+  el.innerHTML=`<div class="dist-kpi"><div class="k-l">Puestos activos</div><div class="k-v">${act.length}</div></div>
+    <div class="dist-kpi"><div class="k-l">Cubiertos</div><div class="k-v">${cub}<small> / ${act.length}</small></div><div class="k-bar"><div style="width:${pct}%;"></div></div></div>
+    <div class="dist-kpi"><div class="k-l">Con disponibilidad</div><div class="k-v">${docs.length}</div></div>
+    <div class="dist-kpi ${nSin?'rojo':''}"><div class="k-l">Sin asignar</div><div class="k-v">${nSin}</div></div>
+    <div class="dist-kpi ${nPar?'ambar':''}"><div class="k-l">Con horas sin cubrir</div><div class="k-v">${nPar}</div></div>`;
+}
+function renderVistaAlt(){
+  const grid=document.getElementById('salas-grid'), alt=document.getElementById('salas-alt');
+  if(!grid||!alt) return;
+  document.querySelectorAll('#dist-vista-sw button').forEach(b=>b.classList.toggle('on',b.dataset.vista===_distVista));
+  if(_distVista==='tarjetas'||!salasCur.length){grid.style.display='';alt.style.display='none';alt.innerHTML='';return;}
+  grid.style.display='none';alt.style.display='';
+  if(_distVista==='linea') renderLineaTiempo(alt); else renderPorServicio(alt);
+}
+function tlColorTurno(t){return (SALA_TURNO_CHIP[t||'dia']||['','#4e6c8a'])[1];}
+function renderLineaTiempo(alt){
+  const miId=APP.user?.id;
+  let h=`<div class="tl-wrap"><div class="tl-in"><div class="tl-row tl-head"><div>Sala</div><div>07:00 – 13:00 · AM</div><div>13:00 – 19:00 · PM</div><div style="background:#eef0f8;">19:00 – 07:00 · Noche</div></div>`;
+  salasCur.forEach((sala,idx)=>{
+    const tl=salaLabel(sala);
+    if(sala.cancelada){
+      h+=`<div class="tl-row canc"><div class="tl-lbl">${escHtml(tl)}<span>cancelada</span></div><div class="tl-bg" style="grid-column:2/5;color:#8b1a1a;cursor:default;">CANCELADA — ${salaCancMotivoTxt(sala.cancelada,salaCancPuedeVerNombres(sala.cancelada))}</div></div>`;
+      return;
+    }
+    const users=sala.users||[];
+    // Barras y carriles
+    const bars=[];const lanes=[];
+    users.forEach((u,i)=>{
+      const doc=getP(u.uid);if(!doc) return;
+      const bl=bloquesTurno(u.turno||'dia');if(!bl.length) return;
+      const cols=bl.map(b=>TL_COL[b]);const a=Math.min(...cols),b=Math.max(...cols)+1;
+      let lane=lanes.findIndex(L=>L.every(([x,y])=>b<=x||a>=y));
+      if(lane<0){lanes.push([]);lane=lanes.length-1;}
+      lanes[lane].push([a,b]);
+      bars.push({u,i,doc,a,b,lane});
+    });
+    const nL=Math.max(1,lanes.length);
+    const cubre=new Set();users.forEach(u=>bloquesTurno(u.turno||'dia').forEach(x=>cubre.add(x)));
+    const relevantes=sala.tipo==='urgencias'?['N']:['AM','PM'];
+    const sinCub=relevantes.some(x=>!cubre.has(x));
+    h+=`<div class="tl-row${sinCub?' sincubrir':''}" data-idx="${idx}" style="grid-template-rows:repeat(${nL},auto);">`;
+    h+=`<div class="tl-lbl" style="grid-row:1/span ${nL};" data-hoja="1">${escHtml(tl)}<span>${sinCub?(cubre.size?'parcial':'sin cubrir'):salaHorario(sala)}</span></div>`;
+    TL_BLQ.forEach(B=>{
+      const rel=relevantes.includes(B);
+      const libre=!cubre.has(B)&&rel;
+      h+=`<div class="tl-bg${B==='N'?' noche':''}${libre?' libre':''}" data-blq="${B}" data-hoja="1" style="grid-column:${TL_COL[B]};grid-row:1/span ${nL};">${libre?(APP.canEdit?'Suelte aquí':'Libre'):''}</div>`;
+    });
+    bars.forEach(({u,i,doc,a,b,lane})=>{
+      const hosp=esHosp(doc);
+      const [lbl]=SALA_TURNO_CHIP[u.turno||'dia']||[String(u.turno||'').toUpperCase()];
+      const tip=`${esHosp(doc)||isIME(doc)?salaNombreCorto(doc,u):doc.nombre+' '+doc.apellidos} · ${turnoLabel(u.turno||'dia')} · ${empresaStr(doc)}${u.uid===miId?' (tú)':''}`;
+      h+=`<div class="tl-bar${hosp?' hosp':''}" ${APP.canEdit?`draggable="true" data-uid="${u.uid}" data-from="${idx}" data-i="${i}"`:''} data-edit="${idx}" title="${escHtml(tip)}" style="grid-column:${a}/${b};grid-row:${lane+1};background:${tlColorTurno(u.turno)};${u.uid===miId?'box-shadow:0 0 0 2px #f59e0b;':''}"><span class="nm">${escHtml(salaNombreCorto(doc,u))}${isIME(doc)?' · IME':''}${hosp?' · hosp.':''}</span><small>${lbl}</small></div>`;
+    });
+    h+=`</div>`;
+  });
+  h+=`</div></div>`;
+  alt.innerHTML=h;
+  if(!APP.canEdit) return;
+  alt.querySelectorAll('.tl-row[data-idx]').forEach(row=>{
+    const idx=parseInt(row.dataset.idx);
+    ddZona(row,idx,e=>e.target.closest('[data-blq]')?.dataset.blq||null,e=>e.target.closest('.tl-bg')||row.querySelector('.tl-lbl'));
+    row.addEventListener('click',e=>{
+      const bar=e.target.closest('.tl-bar');
+      if(_ddArmado&&!bar){const uid=_ddArmado;_ddArmado=null;ddAsignar(uid,idx,null,e.target.closest('[data-blq]')?.dataset.blq||null);return;}
+      if(bar){editSala(idx);return;}
+      if(e.target.closest('[data-hoja]')) abrirHojaAsignar(idx,e.target.closest('[data-blq]')?.dataset.blq||null);
+    });
+  });
+  alt.querySelectorAll('.tl-bar[draggable="true"]').forEach(ddArrastrable);
+}
+const SV_GRUPOS=[
+  {t:'Quirófanos',c:'#8cc4ff',tipos:['sala','oncologia']},
+  {t:'Consulta externa',c:'#fbbf24',tipos:['consultorio']},
+  {t:'Fuera de quirófano',c:'#c4b5fd',tipos:['interconsulta','sedacion']},
+  {t:'Noche · 19–07',c:'#a5b4fc',tipos:['urgencias']}
+];
+const SV_AV=['#7fb2ff','#b79cf0','#6ee7b7','#fcd34d','#67e8f9','#fca5a5','#bef264','#f9a8d4'];
+function renderPorServicio(alt){
+  const miId=APP.user?.id;
+  let h='<div class="sv-wrap">';
+  SV_GRUPOS.forEach(g=>{
+    const idxs=salasCur.map((s,i)=>i).filter(i=>g.tipos.includes(salasCur[i].tipo));
+    if(!idxs.length) return;
+    h+=`<section class="sv-col" aria-label="${g.t}"><div class="sv-col-t" style="color:${g.c};">${g.t} · ${idxs.length}</div>`;
+    idxs.forEach(idx=>{
+      const sala=salasCur[idx];const tl=salaLabel(sala);
+      if(sala.cancelada){
+        h+=`<div class="sv-card canc"><div class="sv-h">${escHtml(tl)}<span class="pill" style="color:#fca5a5;">cancelada</span></div><div class="sv-empty">${salaCancMotivoTxt(sala.cancelada,salaCancPuedeVerNombres(sala.cancelada))}</div></div>`;
+        return;
+      }
+      const users=sala.users||[];
+      const vacia=!users.length;
+      h+=`<div class="sv-card${vacia?' vacia':''}" data-idx="${idx}"><div class="sv-h">${escHtml(tl)}<span class="pill">${vacia?'<span style="color:#fca5a5">sin cubrir</span>':salaHorario(sala)}</span>${APP.canEdit?`<button type="button" aria-label="Editar ${escHtml(tl)}" data-edit="${idx}">${SALA_ICO_EDIT}</button>`:''}</div>`;
+      if(vacia) h+=`<div class="sv-empty">${APP.canEdit?'Arrastre aquí un nombre o toque para asignar':'Sin asignar'}</div>`;
+      users.forEach((u,i)=>{
+        const doc=getP(u.uid);if(!doc) return;
+        const [lbl,col]=SALA_TURNO_CHIP[u.turno||'dia']||[String(u.turno||'').toUpperCase(),'#4e6c8a'];
+        const hosp=esHosp(doc);
+        h+=`<div class="sv-row" ${APP.canEdit?`draggable="true" data-uid="${u.uid}" data-from="${idx}" data-i="${i}"`:''} style="${hosp?'color:#9fb3cc;font-size:12px;':''}${u.uid===miId?'font-weight:700;':''}"><div class="sv-av" style="background:${isIME(doc)?'#f59e0b':SV_AV[(doc.avatar_idx||0)%8]};">${inics(doc)}</div>${escHtml(salaNombreCorto(doc,u))}${isIME(doc)?' · IME':''}${hosp?' · hospitalario':''}<span class="sv-tag" style="background:${col};">${lbl}</span></div>`;
+      });
+      if(sala.canc_parcial) h+=`<div style="font-family:var(--mono);font-size:10px;color:#fcd34d;">${sala.canc_parcial.alcance==='am'?'AM':'PM'} cancelada</div>`;
+      h+=`</div>`;
+    });
+    h+=`</section>`;
+  });
+  h+='</div>';
+  alt.innerHTML=h;
+  if(!APP.canEdit) return;
+  alt.querySelectorAll('.sv-card[data-idx]').forEach(card=>{
+    const idx=parseInt(card.dataset.idx);
+    ddZona(card,idx,null,null);
+    card.addEventListener('click',e=>{
+      const ed=e.target.closest('[data-edit]');if(ed){editSala(idx);return;}
+      if(_ddArmado){const uid=_ddArmado;_ddArmado=null;ddAsignar(uid,idx,null);return;}
+      if(!e.target.closest('.sv-row')) abrirHojaAsignar(idx);
+    });
+  });
+  alt.querySelectorAll('.sv-row[draggable="true"]').forEach(ddArrastrable);
+}
+// ── Hoja de asignacion rapida (pensada para celular, sirve en todo tamano) ──
+function abrirHojaAsignar(idx,bloque){
+  if(!APP.canEdit) return;
+  const sala=salasCur[idx];if(!sala||sala.cancelada) return;
+  document.getElementById('ddh-titulo').textContent=salaLabel(sala)+(bloque?' · '+({AM:'07–13',PM:'13–19',N:'19–07'}[bloque]):'');
+  const asign=(sala.users||[]).map(u=>salaNombreCorto(getP(u.uid),u)).filter(Boolean);
+  document.getElementById('ddh-sub').textContent=asign.length?'Ya asignados: '+asign.join(', '):'Sin anestesiólogo asignado';
+  const rank={sin:0,parcial:1,ok:2};
+  const items=docsConDisp(distDate).filter(d=>!(sala.users||[]).some(u=>u.uid===d.id)).map(d=>{
+    const st=estadoAsignacion(d.id);
+    const t=bloque?turnoParaBloque(d.id,sala,bloque,null):turnoSugerido(d.id,sala,null);
+    return {d,st,t};
+  });
+  const comp=items.filter(x=>x.t).sort((a,b)=>rank[a.st.estado]-rank[b.st.estado]||(a.d.apellidos||'').localeCompare(b.d.apellidos||''));
+  const noc=items.filter(x=>!x.t);
+  let h='';
+  if(comp.length){
+    h+='<div style="font-family:var(--mono);font-size:9px;color:#4e6c8a;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Compatibles con esta sala</div>';
+    comp.forEach(x=>{
+      const [lbl,col]=SALA_TURNO_CHIP[x.t]||[x.t,'#4e6c8a'];
+      const est=x.st.estado==='sin'?'<span style="color:#9b1c1c;">sin asignar</span>':x.st.estado==='parcial'?'<span style="color:#8a4b00;">le falta '+bloquesTxt(x.st.pend)+'</span>':'<span style="color:#0a6a40;">ya asignado en '+x.st.lista.map(a=>salaCorta(salasCur[a.idx])).join(', ')+'</span>';
+      h+=`<button type="button" class="dd-op" data-uid="${x.d.id}"><div class="doc-av ${avCls(x.d)}" style="${isIME(x.d)?'background:#f59e0b;color:#fff;':''}">${inics(x.d)}</div><div style="flex:1;min-width:0;">${escHtml(salaNombreCorto(x.d,{}))}<small>${empresaStr(x.d)} · ofertó ${escHtml(etiquetaOferta(dispOfertados(x.d.id,distDate)))} · ${est}</small></div><span class="sala-chip" style="background:${col};">${lbl}</span></button>`;
+    });
+  }else{
+    h+='<div class="alert warn" style="margin:0 0 8px;">Nadie con disponibilidad compatible para esta sala.</div>';
+  }
+  if(noc.length) h+=`<div style="font-family:var(--mono);font-size:9px;color:#8aa0b8;margin-top:6px;">No compatibles: ${noc.map(x=>escHtml(salaNombreCorto(x.d,{}))+' ('+escHtml(etiquetaOferta(dispOfertados(x.d.id,distDate)))+')').join(', ')}</div>`;
+  const lista=document.getElementById('ddh-lista');lista.innerHTML=h;
+  lista.querySelectorAll('.dd-op').forEach(b=>b.addEventListener('click',()=>{closeModal('modal-dd-hoja');ddAsignar(b.dataset.uid,idx,null,bloque||null);}));
+  document.getElementById('ddh-mas').onclick=()=>{closeModal('modal-dd-hoja');editSala(idx);};
+  openModal('modal-dd-hoja');
+}
+// ══════════════════════════════════════════════════════════════
+//  v2.41.0 — MI AGENDA (inicio del anestesiologo, pensado para celular)
+// ══════════════════════════════════════════════════════════════
+const MA_DN=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MA_DNL=['DOMINGO','LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO'];
+const MA_MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MA_HORARIO={dia:['07:00','19:00',0],noche:['19:00','07:00',1],guardia:['07:00','07:00',1],h6m:['07:00','13:00',0],h6t:['13:00','19:00',0],cx:['07:00','19:00',0],cxam:['07:00','13:00',0],cxpm:['13:00','19:00',0]};
+function maAsignacion(uid,iso){
+  const sl=(APP.dist[iso]?.salas||[]).find(s=>!s.cancelada&&(s.users||[]).some(u=>u.uid===uid));
+  if(!sl) return null;
+  return {sala:sl,u:(sl.users||[]).find(u=>u.uid===uid)};
+}
+function maIcs(iso,titulo,turno){
+  const [hi,hf,sig]=MA_HORARIO[turno]||MA_HORARIO.dia;
+  const d0=iso.replace(/-/g,'');
+  const dt=new Date(iso+'T12:00:00');dt.setDate(dt.getDate()+sig);
+  const d1=toISO(dt).replace(/-/g,'');
+  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ODRABIL//AgendaANS//ES','BEGIN:VEVENT',
+    'UID:ans-'+d0+'-'+Math.random().toString(36).slice(2)+'@agendaans',
+    'DTSTAMP:'+new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z',
+    'DTSTART;TZID=America/Bogota:'+d0+'T'+hi.replace(':','')+'00',
+    'DTEND;TZID=America/Bogota:'+d1+'T'+hf.replace(':','')+'00',
+    'SUMMARY:'+titulo.replace(/[,;]/g,' '),'LOCATION:Clínica Colsubsidio Infantil','END:VEVENT','END:VCALENDAR'].join('\r\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));
+  a.download='AgendaANS-'+iso+'.ics';document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+}
+function maVerPrograma(iso){distDate=iso;navTo('distribucion');}
+function renderMiAgenda(){
+  const el=document.getElementById('dash-agenda');if(!el)return;
+  const uid=APP.user?.id;const yo=getP(uid);
+  if(!yo||!getDocs().some(d=>d.id===uid)){el.innerHTML='';return;}
+  const hoy=new Date();hoy.setHours(12,0,0,0);
+  // Proxima asignacion (hoy o siguientes 21 dias)
+  let prox=null,proxIso=null,proxI=0;
+  for(let i=0;i<=21&&!prox;i++){const d=new Date(hoy);d.setDate(hoy.getDate()+i);const iso=toISO(d);const a=maAsignacion(uid,iso);if(a){prox=a;proxIso=iso;proxI=i;}}
+  let nextHtml;
+  if(prox){
+    const d=new Date(proxIso+'T12:00:00');
+    const k=proxI===0?'HOY':proxI===1?'MAÑANA':MA_DNL[d.getDay()];
+    const t=prox.u.turno||'dia';const [hi,hf]=MA_HORARIO[t]||MA_HORARIO.dia;
+    const [lbl]=SALA_TURNO_CHIP[t]||[t];
+    const titulo=salaLabel(prox.sala)+' · '+turnoLabel(t);
+    nextHtml=`<div class="ma-next"><div class="ma-k">${k} · ${d.getDate()} DE ${MA_MES[d.getMonth()].toUpperCase()}</div>
+      <div class="ma-sala">${escHtml(salaLabel(prox.sala))}</div>
+      <div style="display:flex;gap:8px;align-items:center;font-size:14px;"><span class="ma-chip" style="background:rgba(255,255,255,.22);font-size:11px;">${lbl}</span>${hi} – ${hf} · ${TURNO_HORAS_SALA[t]||12} h</div>
+      <div class="ma-acts"><button type="button" style="background:#fff;color:#1a5cbf;" onclick="maVerPrograma('${proxIso}')">Ver programa</button><button type="button" style="background:rgba(255,255,255,.18);color:#fff;" onclick="maIcs('${proxIso}','${escHtml(titulo).replace(/'/g,'')}','${t}')">Agregar a mi calendario</button></div></div>`;
+  }else{
+    nextHtml=`<div class="ma-next" style="background:#4e6c8a;"><div class="ma-k">PRÓXIMA ASIGNACIÓN</div><div class="ma-sala" style="font-size:18px;">Sin asignaciones publicadas en los próximos días</div><div style="font-size:13px;opacity:.9;">Cuando coordinación guarde la distribución aparecerá aquí.</div></div>`;
+  }
+  // Semana actual
+  const lunes=new Date(hoy);lunes.setDate(hoy.getDate()-((hoy.getDay()+6)%7));
+  let dias='';
+  for(let i=0;i<7;i++){
+    const d=new Date(lunes);d.setDate(lunes.getDate()+i);const iso=toISO(d);
+    const a=maAsignacion(uid,iso);const of=dispOfertados(uid,iso);
+    let chip='<span class="ma-chip" style="background:#c8d4e0;color:#4e6c8a;">—</span>';
+    if(a){const [l,c]=SALA_TURNO_CHIP[a.u.turno||'dia']||['?','#4e6c8a'];chip=`<span class="ma-chip" style="background:${c};" title="${escHtml(salaLabel(a.sala))}">${l}</span>`;}
+    else if(of.length) chip=`<span class="ma-chip of" title="Disponibilidad entregada, sin asignación">${escHtml(etiquetaOferta(of))}</span>`;
+    dias+=`<div class="ma-day${toISO(d)===toISO(hoy)?' hoy':''}">${MA_DN[d.getDay()]}<b>${d.getDate()}</b>${chip}</div>`;
+  }
+  const weekHtml=`<div class="ma-week"><div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px 8px;font-size:13px;font-weight:600;color:#0d1f35;">Mi semana<button class="btn sm" onclick="navTo('calendario')">Mes →</button></div><div class="ma-days">${dias}</div>
+    <div style="font-family:var(--mono);font-size:9px;color:#8aa0b8;margin-top:6px;">Color = asignación de sala · borde punteado = disponibilidad entregada sin asignar</div></div>`;
+  // Horas del mes y aviso de disponibilidad
+  let horas=0,des={};
+  try{const r=calcFacturacion(uid,[hoy.getMonth()],hoy.getFullYear());horas=r.totalHoras||0;des=r.desglose||{};}catch(_){}
+  const sig=new Date(hoy.getFullYear(),hoy.getMonth()+1,1);
+  const pref=`${uid}_${sig.getFullYear()}-${String(sig.getMonth()+1).padStart(2,'0')}-`;
+  const entregados=Object.keys(APP.disp).filter(k=>k.startsWith(pref)).length;
+  const aviso=(hoy.getDate()>=15&&!entregados)?`<button type="button" class="ma-aviso" onclick="navTo('disponibilidad')"><div style="flex:1;"><strong>Entregue su disponibilidad de ${MA_MES[sig.getMonth()]}</strong><div style="font-size:12px;margin-top:2px;">Aún no registra días para ese mes</div></div><span aria-hidden="true">›</span></button>`:'';
+  const sideHtml=`<div class="ma-side"><div class="ma-card"><div style="font-family:var(--mono);font-size:9px;color:#4e6c8a;text-transform:uppercase;">Horas de ${MA_MES[hoy.getMonth()]}</div><div class="ma-v">${horas} h</div><div style="font-size:11px;color:#4e6c8a;">${des.diurno||0} diurnas · ${(des.nocturno||0)+(des.festDom||0)} noct./fest.</div></div>${aviso}</div>`;
+  el.innerHTML=`<div class="ma-hero">${nextHtml}${weekHtml}${sideHtml}</div>`;
+}
+// ══════════════════════════════════════════════════════════════
+//  v2.41.0 — MAPA DE COBERTURA DEL MES (solo administrador)
+// ══════════════════════════════════════════════════════════════
+let cobY=null,cobM=null;
+async function cobNav(d){
+  const n=new Date();
+  if(d===0){cobY=n.getFullYear();cobM=n.getMonth();}
+  else{const t=new Date(cobY,cobM+d,1);cobY=t.getFullYear();cobM=t.getMonth();}
+  await cargarDispMes(cobY,cobM);
+  renderCobertura();
+}
+function cobDia(iso){
+  const docs=getDocs().filter(d=>!esHosp(d));
+  let dD=0,dN=0;
+  docs.forEach(d=>{const bl=new Set();dispOfertados(d.id,iso).forEach(t=>bloquesTurno(t).forEach(b=>bl.add(b)));if(bl.has('AM')||bl.has('PM'))dD++;if(bl.has('N'))dN++;});
+  const dist=APP.dist[iso];
+  if(!dist||!dist.cfg) return {dD,dN,prog:false};
+  const c=dist.cfg;
+  const pN=parseInt(c.urgencias||0);
+  const pD=parseInt(c.salas||0)+parseInt(c.consultorios||0)+parseInt(c.interconsultas||0)+parseInt(c.oncologia||0)+parseInt(c.sedaciones||0);
+  const sal=(dist.salas||[]).filter(s=>!s.cancelada);
+  const asig=sal.filter(s=>(s.users||[]).length).length;
+  const falta=Math.max(0,pD-dD)+Math.max(0,pN-dN);
+  const sobra=(dD-pD)+(dN-pN);
+  return {dD,dN,pD,pN,prog:true,falta,sobra,asig,act:sal.length};
+}
+function renderCobertura(){
+  const cal=document.getElementById('cob-cal'),side=document.getElementById('cob-side');if(!cal)return;
+  if(!APP.isAdmin){cal.innerHTML='<div class="alert warn">Solo el administrador ve la cobertura del mes.</div>';if(side)side.innerHTML='';return;}
+  const tt=document.getElementById('cob-titulo');if(tt)tt.textContent=`Cobertura de ${MA_MES[cobM]} ${cobY}`;
+  const nD=new Date(cobY,cobM+1,0).getDate();
+  const off=(new Date(cobY,cobM,1,12).getDay()+6)%7;
+  const hoyIso=toISO(new Date());
+  let h='<div class="cob-grid">'+['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(x=>`<div class="cob-dh">${x}</div>`).join('');
+  for(let i=0;i<off;i++) h+='<div></div>';
+  const reforzar=[];
+  for(let d=1;d<=nD;d++){
+    const dt=new Date(cobY,cobM,d,12);const iso=toISO(dt);
+    const r=cobDia(iso);const fest=esFest(iso);
+    let cls='',lin='';
+    if(r.prog){
+      cls=r.falta>0?'rojo':r.sobra===0?'ambar':'verde';
+      lin=`<div class="l">Día ${r.dD}/${r.pD}${r.pN?` · N ${r.dN}/${r.pN}`:''}</div><div class="l">${r.falta>0?'faltan '+r.falta:r.sobra===0?'justo':'sobran '+r.sobra}</div>${r.act?`<div class="l" style="opacity:.75;">asig. ${r.asig}/${r.act}</div>`:''}`;
+      if(r.falta>0) reforzar.push({iso,dt,r,fest});
+    }else{
+      lin=`<div class="l">${r.dD} disp. día${r.dN?' · '+r.dN+' N':''}</div><div class="l" style="color:#8aa0b8;">sin programa</div>`;
+    }
+    h+=`<button type="button" class="cob-d ${cls}${fest?' fest':''}${iso===hoyIso?' hoy':''}" onclick="maVerPrograma('${iso}')" title="Abrir la distribución del ${d}"><div class="n">${d}<span>${fest?'FESTIVO':''}</span></div>${lin}</button>`;
+  }
+  h+='</div>';
+  cal.innerHTML=h;
+  // Panel lateral
+  const DNL=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  let sh=`<div class="panel-box" style="margin:0;"><h3 style="margin:0 0 8px;">Días por reforzar</h3>`;
+  sh+=reforzar.length?reforzar.map(x=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:4px 0;border-bottom:1px solid #eef2f7;cursor:pointer;" onclick="maVerPrograma('${x.iso}')"><span>${DNL[x.dt.getDay()]} ${x.dt.getDate()}${x.fest?' · festivo':''}</span><strong style="color:#9b1c1c;">falta${x.r.falta>1?'n':''} ${x.r.falta}</strong></div>`).join(''):'<div style="font-size:12px;color:#0a6a40;">Ningún día programado con faltantes.</div>';
+  sh+=`<div style="font-family:var(--mono);font-size:9px;color:#8aa0b8;margin-top:6px;">Solo cuenta días con distribución guardada (puestos definidos).</div></div>`;
+  const pref=`-${cobY}-${String(cobM+1).padStart(2,'0')}-`;
+  const docs=getDocs().filter(d=>!esHosp(d)&&!isIME(d));
+  const ent=docs.filter(d=>Object.keys(APP.disp).some(k=>k.startsWith(d.id+'_'+pref.slice(1))));
+  const pend=docs.filter(d=>!ent.includes(d));
+  const pct=docs.length?Math.round(ent.length*100/docs.length):0;
+  sh+=`<div class="panel-box" style="margin:0;"><h3 style="margin:0 0 4px;">Disponibilidad entregada</h3><div style="font-size:12px;color:#4e6c8a;margin-bottom:8px;">${ent.length} de ${docs.length} anestesiólogos ya registraron ${MA_MES[cobM]}</div>
+    <div style="height:8px;border-radius:4px;background:#e3e9f1;overflow:hidden;"><div style="width:${pct}%;height:100%;background:#0a7a4a;"></div></div>
+    ${pend.length?`<div style="font-size:12px;color:#0d1f35;margin-top:10px;line-height:1.6;"><strong>Pendientes (${pend.length}):</strong> ${pend.map(d=>escHtml(salaNombreCorto(d,{}))).join(', ')}</div><button class="btn sm prim" style="margin-top:10px;width:100%;min-height:40px;" onclick="cobCopiarRecordatorio()">Copiar recordatorio para WhatsApp</button>`:'<div style="font-size:12px;color:#0a6a40;margin-top:8px;">Todos entregaron.</div>'}</div>`;
+  if(side) side.innerHTML=sh;
+  window._cobPend=pend;
+}
+async function cobCopiarRecordatorio(){
+  const pend=window._cobPend||[];
+  const txt=`Buen día. Recordatorio: por favor registren su disponibilidad de ${MA_MES[cobM]} en AgendaANS (agendaans.odrabil.com).\nPendientes: ${pend.map(d=>salaNombreCorto(d,{})).join(', ')}.\nGracias.`;
+  try{await navigator.clipboard.writeText(txt);toast('Recordatorio copiado. Péguelo en WhatsApp.','success');}
+  catch(_){prompt('Copie el recordatorio:',txt);}
 }
 function autoAsignar(){ if(!APP.canEdit){toast('Sin permisos de edición','info');return;}
   const disp=[...getDocs().filter(d=>{const dp=getDisp(d.id,distDate);return dp&&dp.turnos&&!dp.turnos.includes('no')&&dp.turnos.length;})].sort(()=>Math.random()-.5);
