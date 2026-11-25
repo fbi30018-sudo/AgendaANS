@@ -478,7 +478,7 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
 .cob-d .n{font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:baseline;}
 .cob-d .n span{font-family:var(--mono);font-size:8px;color:#5b3aa6;font-weight:500;}
 .cob-d .l{font-family:var(--mono);font-size:10px;color:#3b4f66;}
-.cob-d.verde{background:#cdeedd;}.cob-d.ambar{background:#fde7c2;}.cob-d.rojo{background:#f8caca;}
+.cob-d.verde{background:#cdeedd;}.cob-d.azul{background:#dfeafb;}.cob-d.rojo{background:#f8caca;}
 .cob-d.fest{border:2px solid #5b3aa6;}
 .cob-d.hoy{box-shadow:0 0 0 2px #1a5cbf inset;}
 .cob-ley{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:#44586f;margin-bottom:10px;}
@@ -1223,14 +1223,14 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--i
       <!-- COBERTURA DEL MES (v2.41.0) -->
       <div id="view-cobertura" class="view">
         <div class="page-hdr">
-          <div><h2 id="cob-titulo">Cobertura del mes</h2><p>Disponibles frente a puestos programados, día por día. Toque un día para abrir su distribución.</p></div>
+          <div><h2 id="cob-titulo">Cobertura del mes</h2><p>Puestos cubiertos en cada distribución guardada (anestesiólogos, hospitalarios e IME). Toque un día para abrir su distribución.</p></div>
           <div class="page-actions" style="display:flex;gap:6px;">
             <button class="btn" onclick="cobNav(-1)" aria-label="Mes anterior">←</button>
             <button class="btn" onclick="cobNav(0)">Este mes</button>
             <button class="btn" onclick="cobNav(1)" aria-label="Mes siguiente">→</button>
           </div>
         </div>
-        <div class="cob-ley"><span><i style="background:#cdeedd"></i>Sobra personal</span><span><i style="background:#fde7c2"></i>Justo</span><span><i style="background:#f8caca"></i>Faltan</span><span><i style="background:#f3f6fa;border:1px solid #c8d4e0"></i>Sin programa guardado</span><span><i style="border:2px solid #5b3aa6"></i>Festivo</span></div>
+        <div class="cob-ley"><span><i style="background:#cdeedd"></i>Todos los puestos cubiertos</span><span><i style="background:#f8caca"></i>Puestos sin nadie asignado</span><span><i style="background:#dfeafb"></i>Programado, por asignar</span><span><i style="background:#f3f6fa;border:1px solid #c8d4e0"></i>Sin programa guardado</span><span><i style="border:2px solid #5b3aa6"></i>Festivo</span></div>
         <div class="cob-layout">
           <div class="panel-box cob-cal" id="cob-cal"></div>
           <div class="cob-side" id="cob-side"></div>
@@ -2754,7 +2754,8 @@ const CHANGELOG=[
     'Indicadores del día sobre las salas: puestos activos, cubiertos, con disponibilidad, sin asignar y con horas sin cubrir.',
     'Asignación rápida: al tocar una sala (o una franja en la línea de tiempo) se abre una lista con solo los anestesiólogos compatibles; un toque y queda asignado. Pensado para el celular, funciona también en el computador. "Más opciones" abre la ventana completa de la sala.',
     'Dashboard: nueva sección "Mi agenda" para cada anestesiólogo, con la próxima asignación (sala, turno y horario), botón para agregarla al calendario del celular, la semana con sus turnos, las horas del mes y un aviso si aún no entregó la disponibilidad del mes siguiente. En celular el Dashboard ahora queda en una sola columna.',
-    'Nuevo menú "Cobertura del mes" (administrador): calendario que compara disponibles contra puestos programados por día (verde sobra, ámbar justo, rojo faltan), con festivos marcados, días por reforzar y quién falta por entregar disponibilidad, más un botón para copiar el recordatorio para WhatsApp. Tocar un día abre su distribución.'
+    'Nuevo menú "Cobertura del mes" (administrador): calendario con los puestos cubiertos de cada distribución guardada, contando anestesiólogos, hospitalarios e IME (verde completo, rojo puestos sin nadie, azul programado por asignar), festivos marcados, días por reforzar y quién falta por entregar disponibilidad, con botón para copiar el recordatorio de WhatsApp. Tocar un día abre su distribución.',
+    'El cálculo de horas por anestesiólogo y de hospitalarios no cambia: "Mi agenda" solo muestra el total que ya calcula la app.'
   ]},
   {v:'2.40.0',n:'Asignación arrastrando nombres',f:'2026-11-25',cambios:[
     'Nuevo: en Distribución de Salas aparece arriba un panel con los anestesiólogos que entregaron disponibilidad ese día. Se arrastra el nombre hasta la sala (o clic en el nombre y luego clic en la sala). El turno se elige solo según lo ofertado y lo que falte por cubrir (por ejemplo, quien ofertó 24 h queda de día en una sala y luego de noche en el Quirófano Urgente).',
@@ -7267,20 +7268,20 @@ async function cobNav(d){
   await cargarDispMes(cobY,cobM);
   renderCobertura();
 }
+// La cobertura NO se calcula con quien registro disponibilidad: los puestos tambien
+// los cubren hospitalarios e IME (rotativos, sin disponibilidad propia). Por eso
+// solo se marca "faltan" cuando la distribucion guardada tiene puestos sin nadie.
 function cobDia(iso){
-  const docs=getDocs().filter(d=>!esHosp(d));
-  let dD=0,dN=0;
-  docs.forEach(d=>{const bl=new Set();dispOfertados(d.id,iso).forEach(t=>bloquesTurno(t).forEach(b=>bl.add(b)));if(bl.has('AM')||bl.has('PM'))dD++;if(bl.has('N'))dN++;});
+  let disp=0;getDocs().forEach(d=>{if(dispOfertados(d.id,iso).length)disp++;});
   const dist=APP.dist[iso];
-  if(!dist||!dist.cfg) return {dD,dN,prog:false};
+  if(!dist||!dist.cfg) return {disp,prog:false};
   const c=dist.cfg;
-  const pN=parseInt(c.urgencias||0);
-  const pD=parseInt(c.salas||0)+parseInt(c.consultorios||0)+parseInt(c.interconsultas||0)+parseInt(c.oncologia||0)+parseInt(c.sedaciones||0);
+  const puestos=['salas','consultorios','interconsultas','oncologia','sedaciones','urgencias'].reduce((a,k)=>a+parseInt(c[k]||0),0);
   const sal=(dist.salas||[]).filter(s=>!s.cancelada);
-  const asig=sal.filter(s=>(s.users||[]).length).length;
-  const falta=Math.max(0,pD-dD)+Math.max(0,pN-dN);
-  const sobra=(dD-pD)+(dN-pN);
-  return {dD,dN,pD,pN,prog:true,falta,sobra,asig,act:sal.length};
+  const cub=sal.filter(s=>(s.users||[]).length).length;
+  const asignada=cub>0;
+  const act=sal.length||puestos;
+  return {disp,puestos,prog:true,asignada,act,cub,falta:asignada?Math.max(0,act-cub):0};
 }
 function renderCobertura(){
   const cal=document.getElementById('cob-cal'),side=document.getElementById('cob-side');if(!cal)return;
@@ -7296,12 +7297,15 @@ function renderCobertura(){
     const dt=new Date(cobY,cobM,d,12);const iso=toISO(dt);
     const r=cobDia(iso);const fest=esFest(iso);
     let cls='',lin='';
-    if(r.prog){
-      cls=r.falta>0?'rojo':r.sobra===0?'ambar':'verde';
-      lin=`<div class="l">Día ${r.dD}/${r.pD}${r.pN?` · N ${r.dN}/${r.pN}`:''}</div><div class="l">${r.falta>0?'faltan '+r.falta:r.sobra===0?'justo':'sobran '+r.sobra}</div>${r.act?`<div class="l" style="opacity:.75;">asig. ${r.asig}/${r.act}</div>`:''}`;
+    if(r.prog&&r.asignada){
+      cls=r.falta>0?'rojo':'verde';
+      lin=`<div class="l">cubiertos ${r.cub}/${r.act}</div><div class="l">${r.falta>0?r.falta+(r.falta>1?' puestos':' puesto')+' sin asignar':'completo'}</div>`;
       if(r.falta>0) reforzar.push({iso,dt,r,fest});
+    }else if(r.prog){
+      cls='azul';
+      lin=`<div class="l">${r.puestos} puestos</div><div class="l">${r.disp} con disp.</div><div class="l" style="opacity:.75;">por asignar</div>`;
     }else{
-      lin=`<div class="l">${r.dD} disp. día${r.dN?' · '+r.dN+' N':''}</div><div class="l" style="color:#8aa0b8;">sin programa</div>`;
+      lin=`<div class="l">${r.disp} con disp.</div><div class="l" style="color:#8aa0b8;">sin programa</div>`;
     }
     h+=`<button type="button" class="cob-d ${cls}${fest?' fest':''}${iso===hoyIso?' hoy':''}" onclick="maVerPrograma('${iso}')" title="Abrir la distribución del ${d}"><div class="n">${d}<span>${fest?'FESTIVO':''}</span></div>${lin}</button>`;
   }
@@ -7310,8 +7314,8 @@ function renderCobertura(){
   // Panel lateral
   const DNL=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
   let sh=`<div class="panel-box" style="margin:0;"><h3 style="margin:0 0 8px;">Días por reforzar</h3>`;
-  sh+=reforzar.length?reforzar.map(x=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:4px 0;border-bottom:1px solid #eef2f7;cursor:pointer;" onclick="maVerPrograma('${x.iso}')"><span>${DNL[x.dt.getDay()]} ${x.dt.getDate()}${x.fest?' · festivo':''}</span><strong style="color:#9b1c1c;">falta${x.r.falta>1?'n':''} ${x.r.falta}</strong></div>`).join(''):'<div style="font-size:12px;color:#0a6a40;">Ningún día programado con faltantes.</div>';
-  sh+=`<div style="font-family:var(--mono);font-size:9px;color:#8aa0b8;margin-top:6px;">Solo cuenta días con distribución guardada (puestos definidos).</div></div>`;
+  sh+=reforzar.length?reforzar.map(x=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:4px 0;border-bottom:1px solid #eef2f7;cursor:pointer;" onclick="maVerPrograma('${x.iso}')"><span>${DNL[x.dt.getDay()]} ${x.dt.getDate()}${x.fest?' · festivo':''}</span><strong style="color:#9b1c1c;">${x.r.falta} sin cubrir</strong></div>`).join(''):'<div style="font-size:12px;color:#0a6a40;">Todas las distribuciones guardadas tienen sus puestos cubiertos.</div>';
+  sh+=`<div style="font-family:var(--mono);font-size:9px;color:#8aa0b8;margin-top:6px;">Se cuentan puestos sin nadie asignado (anestesiólogo, hospitalario o IME) en las distribuciones ya guardadas.</div></div>`;
   const pref=`-${cobY}-${String(cobM+1).padStart(2,'0')}-`;
   const docs=getDocs().filter(d=>!esHosp(d)&&!isIME(d));
   const ent=docs.filter(d=>Object.keys(APP.disp).some(k=>k.startsWith(d.id+'_'+pref.slice(1))));
